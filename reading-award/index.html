@@ -4,27 +4,29 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
-<meta name="theme-color" content="#1d5c68">
+<meta name="theme-color" content="#134650">
 <title>閱讀績優評選平台</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@700&display=swap" rel="stylesheet">
 <style>
 /* =========================================================
    設計代幣
    ========================================================= */
 :root{
-  --bg:#f4f2ed; --surface:#ffffff; --surface-2:#f9f7f3; --ink:#1b262e; --muted:#5a6770; --faint:#89949b;
-  --line:#e4dfd5; --line-strong:#cec6b7;
-  --primary:#1d5c68; --primary-hover:#164a54; --primary-soft:#e3eff0; --primary-ink:#ffffff;
-  --accent:#b8691f; --accent-soft:#fcf0e2;
+  --bg:#f1f4f5; --surface:#ffffff; --surface-2:#f6f8f9; --ink:#15232b; --muted:#54636d; --faint:#87949c;
+  --line:#e1e7ea; --line-strong:#c7d0d6;
+  --primary:#17555f; --primary-hover:#10434c; --primary-deep:#103e47; --primary-soft:#e1eeef; --primary-ink:#ffffff;
+  --accent:#b8691f; --accent-soft:#fcf0e2; --gold:#c9993f;
   --danger:#b3261e; --danger-soft:#fbe9e7; --ok:#257044; --ok-soft:#e4f3e9; --warn:#8f6000; --warn-soft:#fff3d3;
   --s5:#1f6b46; --s4:#4a8b3c; --s3:#8a7b1e; --s2:#c0661f; --s1:#b3261e;
-  --radius:14px; --radius-sm:10px;
-  --shadow:0 1px 2px rgba(27,38,46,.05),0 2px 10px rgba(27,38,46,.05);
-  --shadow-lg:0 14px 44px rgba(27,38,46,.2);
-  --focus:0 0 0 3px rgba(29,92,104,.35);
+  --radius:12px; --radius-sm:9px;
+  --shadow:0 1px 1px rgba(16,40,48,.04),0 3px 12px -4px rgba(16,40,48,.10);
+  --shadow-md:0 2px 4px rgba(16,40,48,.05),0 12px 28px -10px rgba(16,40,48,.20);
+  --shadow-lg:0 18px 50px -8px rgba(16,40,48,.32);
+  --focus:0 0 0 3px rgba(23,85,95,.32);
   --font:"Noto Sans TC",system-ui,-apple-system,"PingFang TC","Microsoft JhengHei",sans-serif;
+  --font-head:"Noto Serif TC","Songti TC","PMingLiU","Noto Sans TC",serif;
   --safe-b:env(safe-area-inset-bottom,0px);
 }
 *{box-sizing:border-box}
@@ -713,6 +715,153 @@ table.tbl{width:100%;border-collapse:collapse;font-size:14px}
 .busy{position:fixed;inset:0;z-index:150;background:rgba(255,255,255,.78);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:14px;font-weight:500}
 .spinner{width:40px;height:40px;border:4px solid var(--primary-soft);border-top-color:var(--primary);border-radius:50%;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
+
+/* =========================================================
+   視覺精修：沉穩的墨青＋冷灰紙色；標題用明體，資料用黑體
+   ========================================================= */
+body{font-feature-settings:"palt" 0;text-rendering:optimizeLegibility}
+::selection{background:#cfe5e7}
+*{scrollbar-width:thin;scrollbar-color:#c3cdd2 transparent}
+/* 標題 */
+.page-head h1,.auth-card h1,.et-id h1,.ehead h1{font-family:var(--font-head);font-weight:700;letter-spacing:.01em}
+.page-head{align-items:center;margin-bottom:18px}
+.page-head h1{font-size:26px}
+.page-head p{font-size:14.5px;max-width:74ch}
+.page-head.compact h1{font-size:24px}
+.card h2{font-size:17px;font-weight:700}
+/* 頂列：深墨青＋底部一道金線（獎項的金） */
+.topbar{background:var(--primary-deep);box-shadow:inset 0 -2px 0 var(--gold),0 6px 18px -8px rgba(16,40,48,.45)}
+.topbar-in{min-height:60px;max-width:1600px}
+.tb-logo{background:rgba(255,255,255,.1);box-shadow:inset 0 0 0 1px rgba(255,255,255,.16)}
+.brand b{font-weight:700;letter-spacing:.02em}
+.brand span{opacity:.72}
+.chip{font-variant-numeric:tabular-nums}
+.userbtn{border-color:rgba(255,255,255,.28);border-radius:999px;padding:0 14px}
+.menu{border-radius:12px;box-shadow:var(--shadow-lg)}
+/* 按鈕與表單 */
+.btn{border-radius:var(--radius-sm);box-shadow:0 1px 1px rgba(16,40,48,.05)}
+.btn:hover{background:var(--surface-2);border-color:#9fabb3}
+.btn.primary{box-shadow:0 1px 2px rgba(16,62,71,.35),inset 0 1px 0 rgba(255,255,255,.12)}
+.btn.ghost,.btn.ghost:hover{box-shadow:none}
+.btn.danger{border-color:#e6bdb8}
+.btn.danger:disabled{color:var(--muted);border-color:var(--line-strong)}
+.input,select.input,textarea.input{border-color:var(--line-strong);transition:border-color .15s,box-shadow .15s}
+.input:hover{border-color:#9fabb3}
+.field>label:not(.check):not(.switch),.field>.lbl{font-size:14.5px;font-weight:700;color:#24343d}
+.seg{box-shadow:0 1px 1px rgba(16,40,48,.05)}
+.seg button[aria-pressed=true]{background:var(--primary);color:#fff}
+/* 卡片與提示 */
+.card{border-color:var(--line);box-shadow:var(--shadow)}
+.rcard{padding:18px 20px}
+.notice{border:1px solid transparent;border-left-width:4px;border-radius:8px}
+.notice.info{border-color:#bcd9dc;border-left-color:var(--primary)}
+.notice.warn{border-color:#efd9a0;border-left-color:#c9993f}
+.notice.danger{border-color:#efc4bf;border-left-color:var(--danger)}
+.notice.ok{border-color:#bfe0cb;border-left-color:var(--ok)}
+.skeleton{background:linear-gradient(90deg,#e6ebee 25%,#f0f3f5 50%,#e6ebee 75%);background-size:200% 100%}
+.empty{padding:48px 16px}
+/* 表格 */
+.tbl-wrap{border-color:var(--line);border-radius:10px}
+table.tbl{font-variant-numeric:tabular-nums}
+.tbl th{background:#f3f6f7;color:#3d4d57;font-size:13px;font-weight:700;letter-spacing:.02em;border-bottom:1px solid var(--line-strong)}
+.tbl td{border-bottom-color:#ebeff1}
+.tbl tbody tr:hover{background:#f6fafa}
+.tbl tbody tr.sel,.tbl tbody tr.sel:hover{background:#e6f1f2}
+.xgrid thead th{background:#f3f6f7}
+.xgrid th.rh{background:#f6f8f9}
+.xgrid td.ro{background:#fafbfc}
+/* 頁籤 */
+.subtabs{border-bottom:1px solid var(--line-strong);gap:2px;margin-bottom:16px}
+.subtabs button{margin-bottom:-1px;border-bottom-width:2px;padding:10px 16px;border-radius:8px 8px 0 0}
+.subtabs button:hover{background:rgba(23,85,95,.05)}
+.tab{box-shadow:var(--shadow);border-radius:var(--radius)}
+.tab[aria-selected=true]{box-shadow:var(--shadow-md)}
+.sumbar,.stat,.ecard,.crit,.eside{border-color:var(--line)}
+.ecard:hover{box-shadow:var(--shadow-md);border-color:#b9c9cd}
+.citem{background:#f8fafb}
+.badge.adm{font-weight:500}
+/* 管理後台：側欄做成面板，目前頁面以左側色條標示 */
+.alayout{gap:24px}
+.anav{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:8px;gap:2px}
+.anav a{position:relative;color:#33434d;min-height:44px;border-radius:8px}
+.anav a:hover{background:#f1f5f6}
+.anav a[aria-current=page]{background:var(--primary-soft);color:var(--primary);font-weight:700}
+.anav a[aria-current=page]::before{content:"";position:absolute;left:0;top:9px;bottom:9px;width:3px;border-radius:3px;background:var(--primary)}
+.anav-tg{margin-top:4px;border-top:1px solid var(--line);border-radius:0 0 8px 8px;font-size:14px}
+@media (max-width:860px){
+  .anav{background:none;border:0;box-shadow:none;padding:0 14px 4px;gap:6px}
+  .anav a{border:1px solid var(--line);background:#fff}
+  .anav a[aria-current=page]{background:var(--primary);color:#fff;border-color:var(--primary)}
+  .anav a[aria-current=page]::before{display:none}
+}
+.stats{gap:14px;margin-bottom:18px}
+.stat{padding:16px 18px;border-radius:var(--radius)}
+.stat .k{font-size:13px;font-weight:500}
+.stat .v{font-size:27px;font-variant-numeric:tabular-nums;letter-spacing:.01em}
+.stat.lead{box-shadow:inset 3px 0 0 var(--gold),var(--shadow)}
+/* 登入：上方深色帶、卡片跨在交界上 */
+.auth-page{background:linear-gradient(180deg,var(--primary-deep) 0,var(--primary-deep) 36%,var(--bg) 36%);position:relative}
+.auth-page::before{content:"";position:absolute;left:0;right:0;top:36%;height:2px;background:var(--gold)}
+.auth-card{position:relative;border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow-lg);padding:34px 30px 30px}
+.auth-card .logo{background:var(--primary-deep);box-shadow:inset 0 -3px 0 var(--gold);border-radius:12px}
+.auth-card h1{font-size:21px;line-height:1.5}
+/* Modal */
+.modal{border-radius:16px}
+.modal header{padding:18px 22px 14px;border-bottom:1px solid var(--line)}
+.modal header h2{font-size:18px}
+.modal .mb{padding:18px 22px 10px}
+.modal footer{padding:14px 22px 18px;background:var(--surface-2);border-top:1px solid var(--line);border-radius:0 0 16px 16px}
+@media (max-width:560px){.modal footer{border-radius:0}}
+.toast{border-radius:10px}
+.paper-wrap,.pv-fs{background:#e3e8eb}
+.sigfs .sig-area{background:#fdfefe}
+/* ---------- 操作紀錄 ---------- */
+.lgtbl th.lg-ck,.lgtbl td.lg-ck{width:40px;padding-right:0;text-align:center}
+.lgtbl input[type=checkbox],.pvtbl input[type=checkbox]{width:17px;height:17px;accent-color:var(--primary);vertical-align:middle;cursor:pointer}
+.lgtbl td{vertical-align:top;padding-top:9px;padding-bottom:9px}
+.lgtbl .lg-time{color:var(--muted)}
+.lgtbl .lg-obj{min-width:200px}
+.seg button[aria-pressed=true] small{color:rgba(255,255,255,.82)}
+.lgtbl .lg-chg{min-width:280px;line-height:1.65}
+/* ---------- 委員互看：評分對照 ---------- */
+.pv-judges{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
+.pv-j{display:inline-flex;align-items:center;gap:8px;padding:5px 8px 5px 12px;border:1px solid var(--line);border-radius:999px;background:var(--surface-2);font-size:14px;font-weight:500}
+.pv-j small{font-weight:400;color:var(--muted)}
+.pv-j.me{border-color:#a9cdd1;background:var(--primary-soft);color:var(--primary)}
+.pvtbl th.pv-me,.pvtbl td.pv-me{background:#eef6f6}
+.pvtbl th.pv-me{color:var(--primary)}
+.pv-you{font-size:11px;font-weight:500;line-height:1.2}
+.pvtbl{min-width:600px}.pvtbl td:nth-child(2){min-width:9em}
+.pvtbl tr[data-nc]{cursor:pointer}
+.pvtbl tr.pv-open>td{border-bottom-color:transparent;background:#f6fafa}
+.pvtbl tr.pv-open>td.pv-me{background:#e8f2f3}
+.pvtbl .pv-tg{min-height:32px;padding:0 8px;gap:4px;color:var(--primary)}
+.pvtbl tr.pv-cm>td{background:#f6fafa;padding:4px 14px 16px}
+.pvtbl tr.pv-cm:hover{background:none}
+.pv-cmgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px}
+.pv-cmj{background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 14px}
+.pv-cmj.me{border-color:#a9cdd1}
+.pv-cmj b{font-size:14px;color:var(--primary)}
+.pv-cmj ol,.pb-j ol{margin:6px 0 0;padding-left:1.4em;line-height:1.75;font-size:15px}
+.pv-cmj li,.pb-j li{white-space:pre-wrap;word-break:break-word}
+.peerbox{padding:0}
+.peerbox summary{display:flex;align-items:center;gap:10px 14px;flex-wrap:wrap;padding:12px 16px;cursor:pointer;list-style:none;min-height:48px}
+.peerbox summary::-webkit-details-marker{display:none}
+.peerbox summary::after{content:"展開";margin-left:auto;font-size:13px;color:var(--muted)}
+.peerbox[open] summary::after{content:"收合"}
+.peerbox[open] summary{border-bottom:1px solid var(--line)}
+.pb-t{display:inline-flex;align-items:center;gap:8px;font-weight:700;font-size:16px}
+.pb-sum{display:inline-flex;flex-wrap:wrap;gap:6px 12px}
+.pb-chip{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--muted)}
+.pb-chip b{color:var(--ink)}
+#peerBody{padding:4px 16px 14px}
+.pb-j{padding:12px 0;border-bottom:1px dashed var(--line)}
+.pb-h{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.pb-j p{margin:4px 0 0}
+.pb-foot{padding-top:12px}
+.peer-set .check{align-items:flex-start;padding:5px 0;line-height:1.55}
+.peer-set .check input{margin-top:3px}
+.peer-set .help{display:block;margin:6px 0 8px;line-height:1.7}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 @media print{.no-print{display:none!important}}
 </style>
@@ -1043,10 +1192,57 @@ const S = {
   cats: [], entries: [], scores: [], comments: [], subs: [], judges: [], admins: [], results: [], refs: [], templates: [],
   loaded: new Set(), pending: 0, lastAct: Date.now(), lastWin: null,
   pendingIds: new Set(), failedIds: new Set(), scoreState: {},
+  roster: null, peer: { sig: "", scores: {}, comments: {}, subs: {}, loaded: new Set(), err: false },
   ui: { catId: sessionStorage.getItem("rj_cat") || null, filter: "all", q: "" }
 };
-let unsubs = [], refsUnsub = null;
-function clearSubs() { unsubs.forEach(u => { try { u(); } catch {} }); unsubs = []; refsUnsub?.(); refsUnsub = null; }
+let unsubs = [], refsUnsub = null, peerUnsubs = [];
+const emptyPeer = sig => ({ sig, scores: {}, comments: {}, subs: {}, loaded: new Set(), err: false });
+function clearSubs() { unsubs.forEach(u => { try { u(); } catch {} }); unsubs = []; refsUnsub?.(); refsUnsub = null; peerUnsubs.forEach(u => { try { u(); } catch {} }); peerUnsubs = []; S.peer = emptyPeer(""); }
+/* ---------- 委員互看（管理者於「評選設定」開放；off＝不開放、cat＝同組、all＝跨組） ---------- */
+const PEER_LABEL = { off: "不開放", cat: "同組互看", all: "跨組互看" };
+const peerMode = () => { const m = S.cfg?.peerView; return m === "cat" || m === "all" ? m : "off"; };
+/** 委員可以查看「其他委員評分與意見」的類別：同組＝自己負責的類別；跨組＝全部類別 */
+function peerCats() { const m = peerMode(); if (S.role !== "judge" || m === "off") return []; return m === "all" ? allCats() : myCats(); }
+const canPeer = catId => peerCats().some(c => c.id === catId);
+/** 委員端：依開放範圍訂閱各類別全部委員的評分、意見、送出狀態（伺服器規則同樣限制；讀取失敗只提示、不登出） */
+function syncPeerSub() {
+  if (S.role !== "judge") return;
+  const ids = ready("cfg", "cats") ? peerCats().map(c => c.id) : [], sig = ids.join(",");
+  if (sig === S.peer.sig) return;
+  peerUnsubs.forEach(u => { try { u(); } catch {} }); peerUnsubs = []; S.peer = emptyPeer(sig);
+  ids.forEach(cid => [["scores", "scores"], ["comments", "comments"], ["subs", "submissions"]].forEach(([k, c]) =>
+    peerUnsubs.push(B.watch(c, ["catId", "==", cid], l => { S.peer[k][cid] = l; S.peer.loaded.add(k + cid); scheduleUpdate(); }, e => { console.warn("peer", e); S.peer.err = true; scheduleUpdate(); }))));
+}
+/** 管理者端：自動維護委員名冊（config/roster，只含姓名與可評類別），委員互看時用來顯示姓名；未開放時為空 */
+let rosterBusy = false, rosterOff = false;
+function syncRoster() {
+  if (S.role !== "admin" || rosterBusy || rosterOff || !ready("judges", "cfg", "roster")) return;
+  const want = {};
+  if (peerMode() !== "off") S.judges.filter(j => j.enabled).forEach(j => { want[j.id] = { name: j.name || "", cats: j.categories || [], at: j.createdAt || 0 }; });
+  const norm = o => JSON.stringify(Object.keys(o || {}).sort().map(k => [k, o[k].name, (o[k].cats || []).slice().sort(), o[k].at]));
+  if (norm(want) === norm(S.roster?.judges)) return;
+  rosterBusy = true;
+  B.set("config", "roster", { judges: want, updatedAt: Date.now() }).catch(e => { console.warn("roster", e); rosterOff = true; }).finally(() => { rosterBusy = false; });
+}
+/** 某類別全部委員的評分與意見對照（委員互看用） */
+function peerData(catId) {
+  const cat = catOf(catId); if (!cat) return null;
+  const me = S.user.uid, scores = S.peer.scores[catId] || [], comments = S.peer.comments[catId] || [], subs = S.peer.subs[catId] || [];
+  const ros = S.roster?.judges || {}, ids = new Set();
+  Object.entries(ros).forEach(([id, j]) => { if (!(j.cats || []).length || j.cats.includes(catId)) ids.add(id); });
+  if (myCats().some(c => c.id === catId)) ids.add(me);
+  scores.forEach(x => ids.add(x.judgeUid)); comments.forEach(x => ids.add(x.judgeUid));
+  const js = [...ids].map(id => ({ id, me: id === me, name: id === me ? (S.me?.name || "") : ros[id]?.name || comments.find(c => c.judgeUid === id)?.judgeName || "委員",
+    at: ros[id]?.at ?? (id === me ? S.me?.createdAt : null) ?? 9e15, sub: subs.some(x => x.judgeUid === id && x.submitted === true) })).sort((a, b) => a.at - b.at);
+  const scIds = catScorers(cat), sj = scIds.length ? js.filter(j => scIds.includes(j.id)) : js;
+  const rows = catEntries(catId).map(e => {
+    const sc = sj.map(j => scores.find(x => x.entryId === e.id && x.judgeUid === j.id)?.score), v = sc.filter(Boolean);
+    const cm = js.map(j => ({ j, list: sortBy(comments.filter(c => c.entryId === e.id && c.judgeUid === j.id), "order", "createdAt").map(c => c.text) })).filter(x => x.list.length);
+    return { e, sc, avg: v.length ? v.reduce((a, b) => a + b, 0) / v.length : null, gap: v.length > 1 ? Math.max(...v) - Math.min(...v) : null, cm, nc: cm.reduce((a, c) => a + c.list.length, 0) };
+  });
+  return { cat, js, sj, rows };
+}
+const softErr = tag => e => console.warn(tag, e);
 /** 參考評語：管理者一律訂閱；委員只有在管理者開放時才訂閱 */
 function syncRefsSub() {
   const want = S.role === "admin" || (S.role === "judge" && S.cfg?.refEnabled === true);
@@ -1062,7 +1258,7 @@ function subscribeCommon() {
   unsubs.push(B.watchDoc("config", "main", d => { S.cfg = d || defaultConfig(); S.loaded.add("cfg"); syncRefsSub(); scheduleUpdate(); }, onWatchErr));
   watchInto("cats", "categories"); watchInto("entries", "entries");
 }
-/** 委員：只訂閱「自己的」評分、意見、送出狀態，看不到其他委員的資料（伺服器規則同樣限制） */
+/** 委員：預設只訂閱「自己的」評分、意見、送出狀態；管理者開放互看後，另由 syncPeerSub 訂閱其他委員資料（唯讀） */
 function subscribeJudge() {
   subscribeCommon();
   unsubs.push(B.watchDoc("judges", S.user.uid, d => {
@@ -1073,10 +1269,12 @@ function subscribeJudge() {
   watchInto("scores", "scores", mine);
   watchInto("comments", "comments", mine);
   watchInto("subs", "submissions", mine);
+  unsubs.push(B.watchDoc("config", "roster", d => { S.roster = d; scheduleUpdate(); }, softErr("roster")));
 }
 function subscribeAdmin() {
   subscribeCommon();
   ["scores:scores", "comments:comments", "subs:submissions", "judges:judges", "admins:admins", "results:results", "templates:templates"].forEach(x => { const [k, c] = x.split(":"); watchInto(k, c, null); });
+  unsubs.push(B.watchDoc("config", "roster", d => { S.roster = d; S.loaded.add("roster"); scheduleUpdate(); }, softErr("roster")));
 }
 /** 寫入包裝：顯示同步狀態、錯誤訊息 */
 function W(p, okMsg) {
@@ -1161,7 +1359,7 @@ function mountView(name, params = {}) {
   scrollTo(0, 0);
   current.update?.(); updateChrome();
 }
-function scheduleUpdate() { if (rafId) return; rafId = requestAnimationFrame(() => { rafId = 0; try { current?.update?.(); } catch (e) { console.error(e); } updateChrome(); }); }
+function scheduleUpdate() { if (rafId) return; rafId = requestAnimationFrame(() => { rafId = 0; try { syncPeerSub(); syncRoster(); } catch (e) { console.error(e); } try { current?.update?.(); } catch (e) { console.error(e); } updateChrome(); }); }
 function parseHash() { const h = location.hash.replace(/^#\/?/, ""); const [p, q] = h.split("?"); return { parts: p.split("/").filter(Boolean).map(decodeURIComponent), q: Object.fromEntries(new URLSearchParams(q || "")) }; }
 function route() {
   if (!S.role) return;
@@ -1175,6 +1373,7 @@ function route() {
   }
   if (parts[0] === "entry" && parts[1]) return mountView("entry", { entryId: parts[1] });
   if (parts[0] === "export" && parts[1]) return mountView("export", { catId: parts[1], judgeUid: S.user.uid });
+  if (parts[0] === "peer") return mountView("peer", { catId: parts[1] || null });
   return mountView("home", {});
 }
 addEventListener("hashchange", route);
@@ -1320,7 +1519,7 @@ async function startSession(u) {
 }
 async function doLogout(msg) {
   clearSubs(); const r = S.role; S.role = null; S.user = null; S.me = null;
-  S.cats = S.entries = S.scores = S.comments = S.subs = S.judges = S.admins = S.results = S.refs = [];
+  S.cats = S.entries = S.scores = S.comments = S.subs = S.judges = S.admins = S.results = S.refs = []; S.roster = null; rosterOff = false;
   try { await B.logout(); } catch {}
   history.replaceState(null, "", location.pathname);
   mountView("login", { msg: msg || (r ? "您已登出。" : "") });
@@ -1341,7 +1540,7 @@ function setHTML(node, html) {
 const ready = (...k) => k.every(x => S.loaded.has(x));
 Views.home = el => {
   el.innerHTML = topbarHTML() + `<main class="wrap">
-    <div class="page-head"><div><h1>評審作業</h1><p class="hide-m">選擇類別後，點選學校進行評分與填寫審查意見。</p></div></div>
+    <div class="page-head"><div><h1>評審作業</h1><p class="hide-m">選擇類別後，點選學校進行評分與填寫審查意見。</p></div><div class="row" id="homeActs"></div></div>
     <div id="lockNote"></div>
     <div class="tabs" role="tablist" id="tabs" aria-label="參賽類別"></div>
     <section class="sumbar" id="sumbar"></section>
@@ -1408,8 +1607,72 @@ Views.home = el => {
     else if (cat && isSubmitted(cat.id)) h = `<div class="notice ok">${I("check")}<span>「${esc(cat.name)}」已確認送出並鎖定。如需修改請洽管理者解鎖。</span></div>`;
     setHTML($("#lockNote", el), h);
   }
-  function update() { if (!ready("cats", "entries")) { renderGrid(); return; } renderTabs(); renderLock(); renderSum(); renderGrid(); }
+  function renderActs() {
+    const m = peerMode();
+    setHTML($("#homeActs", el), m === "off" || !peerCats().length ? "" : `<button class="btn" data-nav="#/peer/${canPeer(S.ui.catId) ? S.ui.catId : ""}" title="管理者已開放${m === "all" ? "全部類別" : "您負責的類別"}：可查看其他委員的評分與審查意見">${I("users", "sm")}委員評分對照</button>`);
+  }
+  function update() { if (!ready("cats", "entries")) { renderGrid(); return; } renderTabs(); renderActs(); renderLock(); renderSum(); renderGrid(); }
   return { update };
+};
+
+/* =====================================================================
+   八之一、委員互看：全部委員的評分與審查意見對照（唯讀；需管理者開放）
+   ===================================================================== */
+Views.peer = (el, { catId }) => {
+  let built = false, q = "", flt = "all";
+  const open = new Set();
+  const shell = inner => { el.innerHTML = topbarHTML() + `<main class="wrap">${inner}</main>`; built = false; };
+  function build() {
+    el.innerHTML = topbarHTML() + `<main class="wrap wide">
+      <nav class="crumbs"><button class="btn sm" data-nav="#/">${I("back", "sm")}返回評分列表</button></nav>
+      <div class="page-head"><div><h1>委員評分對照</h1><p id="pvSub"></p></div>
+        <div class="row"><label class="sr-only" for="pvCat">類別</label><select class="input" id="pvCat" style="width:auto"></select></div></div>
+      <div id="pvNote"></div>
+      <div class="toolbar">
+        <div class="search">${I("search")}<input class="input" id="pvQ" type="search" placeholder="搜尋編號、學校或名稱" aria-label="搜尋"></div>
+        <div class="seg" role="group" aria-label="篩選" id="pvF"><button data-f="all">全部</button><button data-f="gap" title="委員評分相差 2 分以上">差距 ≥ 2</button><button data-f="cm">有意見</button></div>
+        <span class="spacer"></span><button class="btn" id="pvAll"></button>
+      </div>
+      <section class="card rcard"><div class="pv-judges" id="pvJ"></div><div class="tbl-wrap" id="pvT"></div></section></main>`;
+    built = true;
+    $("#pvCat", el).onchange = e => nav("#/peer/" + e.target.value);
+    $("#pvQ", el).oninput = e => { q = e.target.value.trim().toLowerCase(); render(); };
+    $("#pvF", el).onclick = e => { const b = e.target.closest("[data-f]"); if (b) { flt = b.dataset.f; render(); } };
+    $("#pvAll", el).onclick = () => { const ids = shown().filter(r => r.nc).map(r => r.e.id); if (ids.length && ids.every(id => open.has(id))) open.clear(); else ids.forEach(id => open.add(id)); render(); };
+    $("#pvT", el).addEventListener("click", e => { const tr = e.target.closest("tr[data-eid]"); if (!tr || !tr.dataset.nc) return; const id = tr.dataset.eid; open.has(id) ? open.delete(id) : open.add(id); render(); $(`tr[data-eid="${id}"] .pv-tg`, el)?.focus(); });
+  }
+  const shown = () => (peerData(catId)?.rows || []).filter(r => (flt !== "gap" || (r.gap ?? 0) >= 2) && (flt !== "cm" || r.nc) && (!q || [r.e.code, r.e.org, r.e.name].join(" ").toLowerCase().includes(q)));
+  function render() {
+    const pd = peerData(catId), dbl = pd.cat.layout === "double", m = peerMode(), rows = shown();
+    $("#pvSub", el).textContent = `${m === "all" ? "管理者已開放全部類別" : "管理者已開放您負責的類別"}：可查看各委員的評分與審查意見，方便彼此討論。此頁僅供查看，無法修改其他委員的內容。`;
+    setHTML($("#pvCat", el), peerCats().map(c => `<option value="${c.id}" ${c.id === catId ? "selected" : ""}>${esc(c.name)}${myCats().some(x => x.id === c.id) ? "" : "（非本人負責）"}</option>`).join(""));
+    const got = S.peer.loaded.has("scores" + catId) && S.peer.loaded.has("comments" + catId);
+    setHTML($("#pvNote", el), !got && S.peer.err ? `<div class="notice danger">${I("alert")}<span>目前無法讀取其他委員的資料，請洽管理者確認是否已開放（或安全規則是否已更新）。</span></div>` : "");
+    $$("#pvF [data-f]", el).forEach(b => b.setAttribute("aria-pressed", b.dataset.f === flt));
+    const allOpen = rows.some(r => r.nc) && rows.filter(r => r.nc).every(r => open.has(r.e.id));
+    $("#pvAll", el).innerHTML = allOpen ? `${I("up", "sm")}收合全部意見` : `${I("down", "sm")}展開全部意見`;
+    if (!got) { setHTML($("#pvJ", el), ""); setHTML($("#pvT", el), S.peer.err ? `<div class="empty">尚無法顯示</div>` : `<div class="skeleton" style="margin:12px"></div>`); return; }
+    setHTML($("#pvJ", el), `<span class="small muted">本類別委員</span>${pd.js.map(j => `<span class="pv-j ${j.me ? "me" : ""}">${esc(j.name)}${j.me ? "（您）" : ""}${pd.sj.includes(j) ? "" : `<small>只寫意見</small>`}${j.sub ? `<span class="badge ok">${I("lock", "sm")}已送出</span>` : `<span class="badge">評分中</span>`}</span>`).join("") || `<span class="small muted">尚無委員</span>`}`);
+    const ncol = 5 + (dbl ? 1 : 0) + pd.sj.length;
+    setHTML($("#pvT", el), `<table class="tbl pvtbl"><thead><tr><th>編號</th><th>${esc(pd.cat.col1Label || "學校")}</th>${dbl ? `<th>${esc(pd.cat.col2Label || "名稱")}</th>` : ""}
+      ${pd.sj.map(j => `<th class="num ${j.me ? "pv-me" : ""}">${esc(j.name)}${j.me ? `<div class="pv-you">您</div>` : ""}</th>`).join("")}<th class="num">平均</th><th class="num">差距</th><th class="num">審查意見</th></tr></thead><tbody>
+      ${rows.map(r => { const op = open.has(r.e.id) && r.nc;
+        return `<tr data-eid="${r.e.id}" ${r.nc ? 'data-nc="1"' : ""} class="${op ? "pv-open" : ""}"><td class="nowrap"><b>${esc(r.e.code)}</b></td><td>${esc(r.e.org)}</td>${dbl ? `<td>${esc(r.e.name || "")}</td>` : ""}
+          ${r.sc.map((x, i) => `<td class="num ${pd.sj[i].me ? "pv-me" : ""}">${x ? `<span class="pill s s${x}" title="${scaleLabel(x)}">${x}</span>` : '<span class="muted">—</span>'}</td>`).join("")}
+          <td class="num"><b>${r.avg != null ? fmtAvg(r.avg) : "—"}</b></td>
+          <td class="num">${r.gap == null ? '<span class="muted">—</span>' : r.gap >= 2 ? `<span class="badge gap-badge" title="委員評分差距較大，建議討論">${I("alert", "sm")}${r.gap}</span>` : r.gap}</td>
+          <td class="num">${r.nc ? `<button class="btn ghost sm pv-tg" aria-expanded="${!!op}" aria-label="${op ? "收合" : "展開"} ${esc(r.e.org)} 的審查意見">${r.nc} 則${I(op ? "up" : "down", "sm")}</button>` : '<span class="muted">—</span>'}</td></tr>
+          ${op ? `<tr class="pv-cm"><td colspan="${ncol}"><div class="pv-cmgrid">${r.cm.map(c => `<div class="pv-cmj ${c.j.me ? "me" : ""}"><b>${esc(c.j.name)}${c.j.me ? "（您）" : ""}</b><ol>${c.list.map(t => `<li>${esc(t)}</li>`).join("")}</ol></div>`).join("")}</div></td></tr>` : ""}`; }).join("")
+        || `<tr><td colspan="${ncol}" class="empty">${pd.rows.length ? "沒有符合條件的項目" : "此類別尚無參賽資料"}</td></tr>`}</tbody></table>`);
+  }
+  return { update() {
+    if (!ready("cats", "entries", "cfg")) { if (!built) shell(`<div class="skeleton"></div>`); return; }
+    const cats = peerCats();
+    if (!cats.length) return shell(`<div class="empty">管理者目前未開放查看其他委員的評分與意見。<br><br><button class="btn" data-nav="#/">返回評分列表</button></div>`);
+    if (!cats.some(c => c.id === catId)) { catId = (cats.find(c => c.id === S.ui.catId) || cats[0]).id; history.replaceState(null, "", "#/peer/" + catId); }
+    if (!built) build();
+    render();
+  } };
 };
 
 /* =====================================================================
@@ -1457,6 +1720,9 @@ Views.entry = (el, { entryId }) => {
               ${SCALE.map(s => `<button class="sbtn" role="radio" data-v="${s.v}" aria-checked="false"><span class="n">${s.v}</span><span class="l">${s.label}</span></button>`).join("")}
             </div>
           </section>
+          <details class="card wcard peerbox" id="peerCard" hidden ${ls.get("rj_peer_open", false) ? "open" : ""}>
+            <summary><span class="pb-t">${I("users", "sm")}其他委員的評分與意見</span><span class="pb-sum" id="peerSum"></span></summary>
+            <div id="peerBody"></div></details>
           <section class="card wcard" aria-labelledby="h-cm">
             <div class="card-h"><h2 id="h-cm">審查意見 <span class="pill" id="cmCount">0</span></h2><span class="sstate" id="cmState" aria-live="polite"></span></div>
             <ol class="clist" id="clist"></ol>
@@ -1538,7 +1804,21 @@ Views.entry = (el, { entryId }) => {
     });
     [["#prevB", -1], ["#prevB2", -1], ["#prevB3", -1], ["#nextB", 1], ["#nextB2", 1], ["#nextB3", 1]].forEach(([s, d]) => { const b = $(s, el); if (b) b.onclick = () => go(d); });
     document.addEventListener("keydown", onKey);
+    $("#peerCard", el).addEventListener("toggle", ev => ls.set("rj_peer_open", ev.target.open));
     renderDraft();
+  }
+  /** 管理者開放互看時：顯示其他委員對此校的評分與意見（唯讀） */
+  function renderPeer() {
+    const box = $("#peerCard", el); if (!box) return;
+    const en = e(), pd = canPeer(en.catId) ? peerData(en.catId) : null, row = pd?.rows.find(r => r.e.id === entryId);
+    if (!row) { box.hidden = true; return; }
+    box.hidden = false;
+    const others = pd.js.filter(j => !j.me), sOf = j => { const i = pd.sj.indexOf(j); return i < 0 ? null : row.sc[i]; };
+    setHTML($("#peerSum", el), others.map(j => { const x = sOf(j); return pd.sj.includes(j) ? `<span class="pb-chip">${esc(j.name)} ${x ? `<span class="pill s s${x}">${x}</span>` : `<span class="pill">—</span>`}</span>` : ""; }).join("") + (row.avg != null ? `<span class="pb-chip">平均 <b>${fmtAvg(row.avg)}</b></span>` : ""));
+    setHTML($("#peerBody", el), (others.length ? others.map(j => { const x = sOf(j), cm = row.cm.find(c => c.j.id === j.id);
+      return `<div class="pb-j"><div class="pb-h"><b>${esc(j.name)}</b>${pd.sj.includes(j) ? (x ? `<span class="pill s s${x}">${x}</span><span class="small muted">${scaleLabel(x)}</span>` : `<span class="small muted">尚未評分</span>`) : `<span class="small muted">只寫意見</span>`}${j.sub ? `<span class="badge ok">${I("lock", "sm")}已送出</span>` : ""}</div>
+        ${cm ? `<ol>${cm.list.map(t => `<li>${esc(t)}</li>`).join("")}</ol>` : `<p class="small muted">尚無審查意見</p>`}</div>`; }).join("") : `<p class="small muted">${S.peer.err ? "目前無法讀取其他委員的資料，請洽管理者。" : "本類別尚無其他委員。"}</p>`)
+      + `<div class="pb-foot"><button class="btn sm" data-nav="#/peer/${en.catId}">${I("users", "sm")}查看本類別全部對照</button></div>`);
   }
   /** 參考評語放入輸入框（接在既有文字後），手機版自動切回輸入畫面 */
   function applyRef(text) {
@@ -1751,7 +2031,7 @@ Views.entry = (el, { entryId }) => {
     $("#clrScore", el).hidden = !edit || !sc;
     $("#composer", el).hidden = !edit;
     setHTML($("#lockNote", el), edit ? "" : `<div class="notice ${windowState() === "open" ? "ok" : "danger"}">${I("lock")}<span>${esc(lockReason(en.catId))}。目前為唯讀檢視。</span></div>`);
-    renderScoreState(); renderList(); renderDraft(); renderRefs(); layout();
+    renderScoreState(); renderList(); renderDraft(); renderRefs(); renderPeer(); layout();
   }
   return {
     update,
@@ -2559,11 +2839,12 @@ AdminTabs.overview = pane => {
     const st = windowState(), stTxt = { open: "開放中", notyet: "尚未開放", ended: "已截止", paused: "暫停中" }[st] || "—";
     const js = S.judges.filter(j => j.enabled);
     $("#stats", pane).innerHTML = `
-      <div class="stat"><div class="k">評分狀態</div><div class="v" style="color:${st === "open" ? "var(--ok)" : "var(--danger)"}">${stTxt}</div><div class="small muted">截止：${fmtDT(S.cfg.closeAt)}</div></div>
+      <div class="stat lead"><div class="k">評分狀態</div><div class="v" style="color:${st === "open" ? "var(--ok)" : "var(--danger)"}">${stTxt}</div><div class="small muted">截止：${fmtDT(S.cfg.closeAt)}</div></div>
       <div class="stat"><div class="k">參賽類別</div><div class="v">${S.cats.length}</div></div>
       <div class="stat"><div class="k">參賽隊伍／個人</div><div class="v">${S.entries.length}</div></div>
       <div class="stat"><div class="k">啟用中委員</div><div class="v">${js.length}</div></div>
-      <div class="stat"><div class="k">審查意見總數</div><div class="v">${S.comments.length}</div></div>`;
+      <div class="stat"><div class="k">審查意見總數</div><div class="v">${S.comments.length}</div></div>
+      <div class="stat"><div class="k">委員互看評分</div><div class="v" style="color:${peerMode() === "off" ? "var(--muted)" : "var(--primary)"}">${PEER_LABEL[peerMode()]}</div><div class="small muted"><a href="#/admin/settings" data-nav="#/admin/settings">到評選設定調整</a></div></div>`;
     const cats = allCats();
     pane._p = 1; setHTML($("#prog", pane), js.length ? `<table class="tbl"><thead><tr><th>委員</th>${cats.map(c => `<th class="num">${esc(c.name)}</th>`).join("")}</tr></thead><tbody>
       ${sortBy(js, "createdAt").map(j => `<tr><td><b>${esc(j.name)}</b><div class="small muted">${esc(j.username)}</div></td>${cats.map(c => {
@@ -2578,7 +2859,7 @@ AdminTabs.overview = pane => {
 /* ---------- 評選設定 ---------- */
 AdminTabs.settings = pane => {
   let filled = false;
-  pane.innerHTML = `<div class="page-head"><div><h1>評選設定</h1><p>設定平台名稱與評分開放時間。截止後伺服器會自動拒絕任何評分寫入。</p></div></div>
+  pane.innerHTML = `<div class="page-head"><div><h1>評選設定</h1><p>設定平台名稱、評分開放時間，以及委員之間能否互看評分。截止後伺服器會自動拒絕任何評分寫入。</p></div></div>
     <form class="card" id="sf" novalidate>
       <div class="field"><label for="t1">平台名稱</label><input class="input" id="t1"></div>
       <div class="grid2">
@@ -2592,7 +2873,12 @@ AdminTabs.settings = pane => {
       <div class="field"><span class="lbl">評分開關</span>
         <label class="switch"><input type="checkbox" id="io"><span class="track"></span><span id="ioL"></span></label>
         <span class="help">關閉時，即使在開放時間內也無法評分（可用於臨時暫停）</span></div>
-      <div class="notice info">${I("info")}<span>委員之間互相看不到彼此的評分與意見；只有管理者可在「評分結果」查看各委員評分表與總表。</span></div>
+      <fieldset class="field fs-box peer-set"><legend class="lbl">委員互看評分與意見</legend>
+        <label class="check"><input type="radio" name="pv" value="off"><span><b>不開放</b>　委員只看得到自己的評分與意見</span></label>
+        <label class="check"><input type="radio" name="pv" value="cat"><span><b>同組互看</b>　委員可看到「自己負責的類別」中，其他委員的評分與意見</span></label>
+        <label class="check"><input type="radio" name="pv" value="all"><span><b>跨組互看</b>　委員可看到「全部類別」所有委員的評分與意見（含非本人負責的類別）</span></label>
+        <span class="help">開放後，委員首頁會出現「委員評分對照」，評分頁也會顯示其他委員對該校的評分與意見；委員只能查看，不能修改他人的內容。建議等委員各自完成評分後（例如評審會議討論時）再開放，討論完可隨時改回「不開放」。名次與等第評定仍只有管理者看得到。</span>
+      </fieldset>
       <div class="row"><button class="btn primary" type="submit">${I("check")}儲存設定</button>
         <button class="btn danger" type="button" id="close5">立即截止</button>
         <span class="spacer"></span><span class="muted small" id="upd"></span></div>
@@ -2606,9 +2892,10 @@ AdminTabs.settings = pane => {
     if (ca <= oa) return toast("截止時間必須晚於開放時間", "error");
     const base = { ...(S.cfg || {}) }; delete base.id;
     const d = { ...base, title: $("#t1", pane).value.trim() || DEFAULT_TITLE, shortTitle: $("#t3", pane).value.trim(), subtitle: $("#t2", pane).value.trim(), openAt: oa, closeAt: ca,
-      isOpen: $("#io", pane).checked, updatedAt: Date.now() };
+      isOpen: $("#io", pane).checked, peerView: $("input[name=pv]:checked", pane)?.value || "off", updatedAt: Date.now() };
+    const pvOld = peerMode(), notes = [d.title !== S.cfg?.title ? "平台名稱：" + d.title : "", d.peerView !== pvOld ? `委員互看：${PEER_LABEL[pvOld]} → ${PEER_LABEL[d.peerView]}` : ""].filter(Boolean).join("；");
     try { await W(B.batch([{ op: "set", c: "config", id: "main", d }, { op: "set", c: "config", id: "public", d: { title: d.title, subtitle: d.subtitle } },
-      auditOp("config", { from: S.cfg ? `${fmtDT(S.cfg.openAt)}～${fmtDT(S.cfg.closeAt)}・${S.cfg.isOpen ? "開啟" : "關閉"}` : "", to: `${fmtDT(oa)}～${fmtDT(ca)}・${d.isOpen ? "開啟" : "關閉"}`, detail: d.title !== S.cfg?.title ? "平台名稱：" + d.title : "" })]), "設定已儲存"); } catch {}
+      auditOp("config", { from: S.cfg ? `${fmtDT(S.cfg.openAt)}～${fmtDT(S.cfg.closeAt)}・${S.cfg.isOpen ? "開啟" : "關閉"}` : "", to: `${fmtDT(oa)}～${fmtDT(ca)}・${d.isOpen ? "開啟" : "關閉"}`, detail: notes })]), "設定已儲存"); } catch {}
   };
   $("#close5", pane).onclick = async () => {
     if (!await confirmDialog("確定要立即截止評分？所有委員將無法再修改。", { ok: "立即截止", danger: true })) return;
@@ -2619,6 +2906,7 @@ AdminTabs.settings = pane => {
     $("#t1", pane).value = c.title || DEFAULT_TITLE; $("#t2", pane).value = c.subtitle || ""; $("#t3", pane).value = c.shortTitle || shortTitle();
     $("#oa", pane).value = toLocalInput(c.openAt); $("#ca", pane).value = toLocalInput(c.closeAt);
     $("#io", pane).checked = !!c.isOpen; $("#ioL", pane).textContent = c.isOpen ? "開啟" : "關閉";
+    $(`input[name=pv][value="${peerMode()}"]`, pane).checked = true;
     $("#upd", pane).textContent = c.updatedAt ? "上次更新：" + fmtDT(c.updatedAt) : "";
   } };
 };
@@ -4052,9 +4340,10 @@ AdminTabs.refs = pane => {
 
 /* ---------- 備份與紀錄（操作紀錄｜資料備份｜年度沿用） ---------- */
 AdminTabs.records = pane => {
-  let view = sessionStorage.getItem("rj_rec_view") || "log", limit = 300, logs = [], unsub = null, built = "";
+  let view = sessionStorage.getItem("rj_rec_view") || "log", limit = 300, logs = [], unsub = null, built = "", shownIds = [];
+  const sel = new Set();
   const f = { cat: "", who: "", grp: "", q: "" };
-  pane.innerHTML = `<div class="page-head compact"><div><h1>備份與紀錄</h1><p>所有評分、意見、名次與設定變更都會自動記錄，且無法修改或刪除。</p></div></div>
+  pane.innerHTML = `<div class="page-head compact"><div><h1>備份與紀錄</h1><p>所有評分、意見、名次與設定變更都會自動記錄；紀錄無法修改，只有管理者可以刪除。</p></div></div>
     <div class="subtabs" role="tablist" aria-label="備份與紀錄">
       <button role="tab" data-v="log">${I("clock", "sm")}操作紀錄</button>
       <button role="tab" data-v="backup">${I("dl", "sm")}資料備份</button>
@@ -4066,8 +4355,10 @@ AdminTabs.records = pane => {
 
   /* ---- 操作紀錄 ---- */
   function buildLog() {
-    box.innerHTML = `<div class="card-h"><div><h2>操作紀錄</h2><p class="sub" style="margin:2px 0 0">誰、在什麼時間、改了哪一校的什麼（變更前 → 變更後）。紀錄與資料同時寫入，伺服器規則禁止修改或刪除。</p></div>
-        <button class="btn sm" id="lgCsv">${I("dl", "sm")}匯出全部紀錄（CSV）</button></div>
+    box.innerHTML = `<div class="card-h"><div><h2>操作紀錄</h2><p class="sub" style="margin:2px 0 0">誰、在什麼時間、改了哪一校的什麼（變更前 → 變更後）。紀錄與資料同時寫入，任何人都無法修改；管理者可刪除舊紀錄（例如測試資料），刪除動作本身會留下一筆紀錄。</p></div>
+        <div class="row"><button class="btn sm" id="lgCsv">${I("dl", "sm")}匯出全部紀錄（CSV）</button>
+          <button class="btn sm danger" id="lgDel" disabled>${I("trash", "sm")}刪除選取</button>
+          <button class="btn sm danger" id="lgClr">${I("trash", "sm")}清除全部紀錄</button></div></div>
       <div class="f-tools">
         <select class="input sm" id="lgCat" style="width:auto" aria-label="類別"></select>
         <select class="input sm" id="lgWho" style="width:auto" aria-label="人員"></select>
@@ -4081,8 +4372,47 @@ AdminTabs.records = pane => {
     $("#lgGrp", box).onchange = e => { f.grp = e.target.value; renderLogRows(); };
     $("#lgQ", box).oninput = e => { f.q = e.target.value.trim().toLowerCase(); renderLogRows(); };
     $("#lgMore", box).onclick = () => { limit += 500; subscribe(); };
-    $("#lgCsv", box).onclick = exportAuditCsv;
+    $("#lgCsv", box).onclick = () => exportAuditCsv();
+    $("#lgT", box).addEventListener("change", e => {
+      const c = e.target.closest("input[data-lg]"); if (!c) return;
+      if (c.dataset.lg === "all") { shownIds.forEach(id => c.checked ? sel.add(id) : sel.delete(id)); $$("input[data-lg=one]", box).forEach(x => { x.checked = c.checked; x.closest("tr").classList.toggle("sel", c.checked); }); }
+      else { c.checked ? sel.add(c.value) : sel.delete(c.value); c.closest("tr").classList.toggle("sel", c.checked); }
+      updSel();
+    });
+    $("#lgDel", box).onclick = async () => {
+      const list = logs.filter(x => sel.has(x.id)); if (!list.length) return;
+      if (!await confirmDialog(`確定刪除選取的 ${list.length} 筆操作紀錄？\n刪除後無法復原；如需留存，請先按「匯出全部紀錄（CSV）」。`, { title: "刪除操作紀錄", ok: `刪除 ${list.length} 筆`, danger: true })) return;
+      delLogs(list);
+    };
+    $("#lgClr", box).onclick = clearAllModal;
     subscribe();
+  }
+  const spanOf = list => { const ts = list.map(x => x.at || 0).filter(Boolean); return ts.length ? `${fmtDT(Math.min(...ts))}～${fmtDT(Math.max(...ts))}` : ""; };
+  /** 刪除操作紀錄（僅管理者；伺服器規則同樣限制），並留下一筆「刪除紀錄」 */
+  async function delLogs(list, all) {
+    const ops = list.map(x => ({ op: "delete", c: "audit", id: x.id }));
+    ops.push(auditOp("audit.del", { detail: `${all ? "清除全部" : "刪除"}操作紀錄 ${list.length} 筆（紀錄時間 ${spanOf(list)}）` }));
+    try { await W(B.batch(ops), `已刪除 ${list.length} 筆紀錄`); list.forEach(x => sel.delete(x.id)); renderLogRows(); return true; } catch { return false; }
+  }
+  function clearAllModal() {
+    openModal({ title: "清除全部操作紀錄", body: `
+      <div class="notice danger">${I("alert")}<span>將刪除平台上<b>全部</b>操作紀錄（不只目前畫面顯示的），刪除後<b>無法復原</b>。評分、意見、名次等資料本身不受影響。</span></div>
+      <label class="check"><input type="checkbox" id="lcBk" checked>刪除前先下載全部紀錄（CSV）留存</label>
+      <div class="field" style="margin-top:10px"><label for="lcOk">請輸入「刪除」確認</label><input class="input" id="lcOk" autocomplete="off"></div>`,
+      actions: [{ label: "取消" }, { label: "清除全部紀錄", kind: "danger solid", onClick: async ov => {
+        if ($("#lcOk", ov).value.trim() !== "刪除") { toast("請輸入「刪除」", "error"); return false; }
+        const all = $("#lcBk", ov).checked ? await exportAuditCsv() : await B.list("audit").catch(e => { toast(errMsg(e), "error"); return null; });
+        if (!all) { toast("未能讀取紀錄，已取消清除", "error"); return false; }
+        if (!all.length) { toast("目前沒有操作紀錄"); return; }
+        const done = busy(`正在刪除 ${all.length} 筆紀錄…`);
+        try { sel.clear(); await delLogs(all, true); } finally { done(); }
+      } }] });
+  }
+  function updSel() {
+    const b = $("#lgDel", box); if (!b) return;
+    b.disabled = !sel.size; b.innerHTML = `${I("trash", "sm")}刪除選取${sel.size ? `（${sel.size}）` : ""}`;
+    const a = $("input[data-lg=all]", box), n = shownIds.filter(id => sel.has(id)).length;
+    if (a) { a.checked = !!shownIds.length && n === shownIds.length; a.indeterminate = n > 0 && n < shownIds.length; }
   }
   function renderLogRows() {
     if (view !== "log" || !$("#lgT", box)) return;
@@ -4091,15 +4421,18 @@ AdminTabs.records = pane => {
     setHTML($("#lgWho", box), `<option value="">全部人員</option>${who.map(c => `<option ${c === f.who ? "selected" : ""}>${esc(c)}</option>`).join("")}`);
     const l = logs.filter(x => (!f.cat || x.catName === f.cat) && (!f.who || x.name === f.who) && (!f.grp || (ACT[x.act] || [])[1] === f.grp)
       && (!f.q || [x.entryLabel, x.detail, x.from, x.to, x.targetName, x.catName].join(" ").toLowerCase().includes(f.q)));
+    const have = new Set(logs.map(x => x.id)); [...sel].forEach(id => { if (!have.has(id)) sel.delete(id); });
+    shownIds = l.map(x => x.id);
     $("#lgCount", box).textContent = `顯示 ${l.length} 筆（已載入最近 ${logs.length} 筆）`;
     $("#lgMore", box).hidden = logs.length < limit;
     const cut = (t, n = 60) => { t = String(t ?? ""); return t.length > n ? esc(t.slice(0, n)) + "…" : esc(t); };
-    setHTML($("#lgT", box), l.length ? `<table class="tbl dense"><thead><tr><th>時間</th><th>人員</th><th>動作</th><th>類別</th><th>對象</th><th>變更內容</th></tr></thead><tbody>
-      ${l.map(x => `<tr><td class="nowrap small">${fmtDTs(x.at)}</td><td class="nowrap"><b>${esc(x.name)}</b> ${x.role === "admin" ? '<span class="badge adm">管理者</span>' : ""}</td>
-        <td class="nowrap"><span class="badge act-${(ACT[x.act] || ["", "系統"])[1]}">${esc((ACT[x.act] || [x.act])[0])}</span></td><td class="small">${esc(x.catName)}</td>
-        <td class="small">${esc(x.entryLabel || x.targetName || "")}</td>
-        <td class="small" title="${esc([x.from !== "" ? "前：" + x.from : "", x.to !== "" ? "後：" + x.to : "", x.detail].filter(Boolean).join("\n"))}">${x.from !== "" || x.to !== "" ? `<span class="lg-from">${cut(x.from) || "—"}</span> → <b>${cut(x.to) || "—"}</b>` : ""}${x.detail ? `<span class="muted"> ${cut(x.detail, 90)}</span>` : ""}</td></tr>`).join("")}</tbody></table>`
+    setHTML($("#lgT", box), l.length ? `<table class="tbl dense lgtbl"><thead><tr><th class="lg-ck"><input type="checkbox" data-lg="all" aria-label="選取目前顯示的全部紀錄" title="選取目前顯示的全部紀錄"></th><th>時間</th><th>人員</th><th>動作</th><th>類別</th><th>對象</th><th>變更內容</th></tr></thead><tbody>
+      ${l.map(x => `<tr class="${sel.has(x.id) ? "sel" : ""}"><td class="lg-ck"><input type="checkbox" data-lg="one" value="${esc(x.id)}" ${sel.has(x.id) ? "checked" : ""} aria-label="選取此筆紀錄"></td><td class="nowrap small lg-time">${fmtDTs(x.at)}</td><td class="nowrap"><b>${esc(x.name)}</b> ${x.role === "admin" ? '<span class="badge adm">管理者</span>' : ""}</td>
+        <td class="nowrap"><span class="badge act-${(ACT[x.act] || ["", "系統"])[1]}">${esc((ACT[x.act] || [x.act])[0])}</span></td><td class="small nowrap">${esc(x.catName)}</td>
+        <td class="small lg-obj">${esc(x.entryLabel || x.targetName || "")}</td>
+        <td class="small lg-chg" title="${esc([x.from !== "" ? "前：" + x.from : "", x.to !== "" ? "後：" + x.to : "", x.detail].filter(Boolean).join("\n"))}">${x.from !== "" || x.to !== "" ? `<span class="lg-from">${cut(x.from) || "—"}</span> → <b>${cut(x.to) || "—"}</b>` : ""}${x.detail ? `<span class="muted"> ${cut(x.detail, 90)}</span>` : ""}</td></tr>`).join("")}</tbody></table>`
       : `<div class="empty">${logs.length ? "沒有符合條件的紀錄" : "尚無操作紀錄"}</div>`);
+    updSel();
   }
   async function exportAuditCsv() {
     const done = busy("讀取全部紀錄…");
@@ -4109,7 +4442,8 @@ AdminTabs.records = pane => {
       const rows = all.map(x => [fmtDTs(x.at), x.name, x.role === "admin" ? "管理者" : "委員", (ACT[x.act] || [x.act])[0], x.catName, x.entryLabel || x.targetName || "", x.from, x.to, x.detail]);
       const csv = "﻿" + [head, ...rows].map(r => r.map(v => `"${String(v ?? "").replace(/"/g, '""')}"`).join(",")).join("\r\n");
       download(new Blob([csv], { type: "text/csv;charset=utf-8" }), safeName(`${yearTag()}閱讀評選_操作紀錄`) + ".csv");
-    } catch (e) { toast(errMsg(e), "error"); } finally { done(); }
+      return all;
+    } catch (e) { toast(errMsg(e), "error"); return null; } finally { done(); }
   }
 
   /* ---- 資料備份 ---- */
@@ -4193,7 +4527,7 @@ const ACT = {
   "config": ["修改評選設定", "名單與設定"], "close": ["立即截止", "名單與設定"],
   "judge.add": ["建立帳號", "帳號"], "judge.edit": ["修改委員", "帳號"], "judge.toggle": ["啟用／停用", "帳號"], "judge.del": ["移除委員", "帳號"], "admin.del": ["移除管理者", "帳號"],
   "proxy.score": ["代修評分", "代修"], "proxy.clear": ["代為清除評分", "代修"], "proxy.cadd": ["代為新增意見", "代修"], "proxy.cedit": ["代修意見", "代修"], "proxy.cdel": ["代為刪除意見", "代修"],
-  "tpl": ["範本庫", "名單與設定"], "backup": ["匯出備份", "系統"], "rollover": ["開始新年度", "系統"]
+  "tpl": ["範本庫", "名單與設定"], "backup": ["匯出備份", "系統"], "rollover": ["開始新年度", "系統"], "audit.del": ["刪除紀錄", "系統"]
 };
 const fmtDTs = ms => { if (!ms) return "—"; const d = new Date(ms); return `${fmtDT(ms)}:${pad2(d.getSeconds())}`; };
 /** 產生一筆操作紀錄（放進同一個 batch，與資料同時寫入） */
@@ -4269,7 +4603,7 @@ async function rollover({ year, title, keepE, keepJ, keepS, clearSig, toRefs, to
     if (!keepJ || !keepS) S.cats.filter(c => (c.scorers || []).length).forEach(c => ops.push({ op: "update", c: "categories", id: c.id, d: { scorers: [], scorerNames: [] } }));
     const now = Date.now(), cfg = { ...S.cfg }; delete cfg.id;
     const st = (cfg.shortTitle || "").replace(/^\d+年度/, year + "年度");
-    ops.push({ op: "set", c: "config", id: "main", d: { ...cfg, title, shortTitle: st || "", isOpen: false, openAt: now, closeAt: now + 7 * 864e5, updatedAt: now } });
+    ops.push({ op: "set", c: "config", id: "main", d: { ...cfg, title, shortTitle: st || "", isOpen: false, peerView: "off", openAt: now, closeAt: now + 7 * 864e5, updatedAt: now } });
     ops.push({ op: "set", c: "config", id: "public", d: { title, subtitle: cfg.subtitle || DEFAULT_SUB } });
     ops.push(auditOp("rollover", { detail: `開始 ${year} 年度：刪除評分 ${S.scores.length}、意見 ${S.comments.length}；名單${keepE ? "保留" : "清空"}；委員${keepJ ? "保留" : "移除"}` }));
     await W(B.batch(ops), `已開始 ${year} 年度。請到「評選設定」設定開放時間，並更新參賽名單。`);
