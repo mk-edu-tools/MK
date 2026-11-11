@@ -862,6 +862,31 @@ table.tbl{font-variant-numeric:tabular-nums}
 .peer-set .check{align-items:flex-start;padding:5px 0;line-height:1.55}
 .peer-set .check input{margin-top:3px}
 .peer-set .help{display:block;margin:6px 0 8px;line-height:1.7}
+
+/* ---------- 後台選單分組、總覽評選流程、未評分列 ---------- */
+.anav-g{padding:12px 14px 4px;font-size:12px;font-weight:700;color:var(--faint);letter-spacing:.06em}
+.anav-g:first-child{padding-top:4px}
+.alayout.mini .anav-g{padding:6px 10px}.alayout.mini .anav-g span{display:none}
+.alayout.mini .anav-g::before{content:"";display:block;border-top:1px solid var(--line)}
+@media (max-width:860px){.anav-g{display:none}}
+.flow{list-style:none;margin:0 0 18px;padding:0;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+.flow li{position:relative;min-width:0}
+.flow li+li{border-left:1px solid var(--line)}
+.flow a{display:flex;align-items:center;gap:12px;padding:14px 16px;height:100%;text-decoration:none;color:var(--ink)}
+.flow a:hover{background:#f4f8f9}
+.fl-n{flex:none;display:grid;place-items:center;width:30px;height:30px;border-radius:50%;border:1.5px solid var(--line-strong);color:var(--muted);font-weight:700;font-size:14px;background:#fff}
+.fl-b{display:flex;flex-direction:column;min-width:0;line-height:1.4}
+.fl-b b{font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fl-b small{font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.flow li.done .fl-n{background:var(--ok);border-color:var(--ok);color:#fff}
+.flow li.cur{box-shadow:inset 0 -3px 0 var(--gold)}
+.flow li.cur .fl-n{background:var(--primary);border-color:var(--primary);color:#fff}
+.flow li.cur small{color:var(--primary);font-weight:500}
+@media (max-width:1100px){.flow{grid-template-columns:1fr}.flow li+li{border-left:0;border-top:1px solid var(--line)}.flow li.cur{box-shadow:inset 3px 0 0 var(--gold)}}
+.fpos.none{background:none;color:var(--faint);font-weight:500}
+.ftbl tr.unrated{cursor:default}
+.ftbl tr.unrated td{color:var(--muted)}
+.ftbl tr.unrated td b{font-weight:500}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 @media print{.no-print{display:none!important}}
 </style>
@@ -2215,10 +2240,14 @@ function summaryData(catId) {
   const ranked = rows.filter(r => r.avg != null).sort((a, b) => b.avg - a.avg);
   ranked.forEach((r, i) => r.rank = i && Math.abs(ranked[i - 1].avg - r.avg) < 1e-9 ? ranked[i - 1].rank : i + 1);
   const res = resultOf(catId);
-  const order = res ? [...(res.order || []).filter(id => rows.some(r => r.e.id === id)), ...rows.slice().sort((a, b) => (b.avg ?? -1) - (a.avg ?? -1) || (a.e.order || 0) - (b.e.order || 0)).map(r => r.e.id).filter(id => !(res.order || []).includes(id))] : [];
-  rows.forEach(r => { r.final = res ? order.indexOf(r.e.id) + 1 : null; r.award = res?.awards?.[r.e.id] || ""; });
-  return { cat, js, sj, rows, res };
+  /* 名次只給「已有評分」的隊伍；管理者手動調整（或鎖定）過，才採用評定頁的順序，否則一律依平均 */
+  const manual = resManual(res), scored = rows.filter(r => r.avg != null);
+  const order = manual ? [...(res.order || []).filter(id => scored.some(r => r.e.id === id)), ...scored.slice().sort((a, b) => b.avg - a.avg || (a.e.order || 0) - (b.e.order || 0)).map(r => r.e.id).filter(id => !(res.order || []).includes(id))] : [];
+  rows.forEach(r => { r.final = manual && r.avg != null ? order.indexOf(r.e.id) + 1 : null; r.award = res?.awards?.[r.e.id] || ""; });
+  return { cat, js, sj, rows, res, manual };
 }
+/** 評定名次是否經手動調整（舊資料沒有 manual 欄位時：已鎖定者視為已決議） */
+const resManual = res => res ? (res.manual ?? !!res.locked) : false;
 const SUM_JW = 1040;
 const hasAward = sd => sd.rows.some(r => r.award);
 function summaryCols(sd, showScores) {
@@ -2239,11 +2268,11 @@ function summaryHTML(sd, showScores, withSign) {
         ${two ? `<th colspan="${n}">各委員評分</th>` : ""}<th${rs}>平均</th><th${rs}>名次</th>${aw ? `<th${rs}>等第</th>` : ""}<th${rs}>審查意見</th></tr>
         ${two ? `<tr>${sd.sj.map(j => `<th>${esc(j.name)}</th>`).join("")}</tr>` : ""}</thead>
       <tbody>${sd.rows.map(r => `<tr><td>${esc(r.e.code)}</td><td>${esc(r.e.org)}</td>${dbl ? `<td>${esc(r.e.name || "")}</td>` : ""}
-        ${two ? r.sc.map(x => `<td>${x || ""}</td>`).join("") : ""}<td><b>${fmtAvg(r.avg)}</b></td><td>${(sd.res ? r.final : r.rank) || ""}</td>${aw ? `<td><b>${esc(r.award)}</b></td>` : ""}
+        ${two ? r.sc.map(x => `<td>${x || ""}</td>`).join("") : ""}<td><b>${fmtAvg(r.avg)}</b></td><td>${(sd.manual ? r.final : r.rank) || ""}</td>${aw ? `<td><b>${esc(r.award)}</b></td>` : ""}
         <td class="op">${r.cm.map(c => `<div class="cj"><b>${esc(c.name)}：</b><ol>${c.list.map(t => `<li>${esc(t).replace(/\n/g, "<br>")}</li>`).join("")}</ol></div>`).join("")}</td></tr>`).join("")}</tbody>
     </table>
     ${sd.cat.note ? `<p class="s-note">備註：${esc(sd.cat.note)}</p>` : ""}
-    <p class="small">※ 平均為${catScorers(sd.cat).length ? "評分委員" : "已評分委員"}之算術平均（取至小數第二位）；${sd.res ? "名次及等第依評審會議決議。" : "名次依平均由高至低排列，同分同名次。"}</p>
+    <p class="small">※ 平均為${catScorers(sd.cat).length ? "評分委員" : "已評分委員"}之算術平均（取至小數第二位）；${sd.manual ? "名次及等第依評審會議決議。" : "名次依平均由高至低排列，同分同名次；尚未評分者不列名次。"}</p>
     ${withSign && sd.js.length ? `<div class="s-signs"><p>評審委員簽名：</p><div class="sg-grid">${sd.js.map(j => `<div class="sg"><span>${esc(j.name)}</span><span class="sg-box">${j.signature ? `<img src="${j.signature}" alt="">` : ""}</span></div>`).join("")}</div></div>` : ""}
   </div>`;
 }
@@ -2304,7 +2333,7 @@ async function summaryDocx(sd, showScores, withSign) {
   sd.rows.forEach(row => rows.push(new D.TableRow({ cantSplit: true, children: [
     cell([para(r(row.e.code), C)], W[0]), cell([para(r(row.e.org), C)], W[1]), ...(dbl ? [cell([para(r(row.e.name || ""), C)], W[2])] : []),
     ...(two ? row.sc.map((x, i) => cell([para(r(x ? String(x) : ""), C)], W[off + i])) : []),
-    cell([para(r(fmtAvg(row.avg), { bold: true }), C)], W[off + n]), cell([para(r(String((sd.res ? row.final : row.rank) || "")), C)], W[off + n + 1]),
+    cell([para(r(fmtAvg(row.avg), { bold: true }), C)], W[off + n]), cell([para(r(String((sd.manual ? row.final : row.rank) || "")), C)], W[off + n + 1]),
     ...(aw ? [cell([para(r(row.award, { bold: true }), C)], W[off + n + 2])] : []),
     cell(row.cm.length ? row.cm.flatMap(c => [para(r(`${c.name}：`, { bold: true }), { spacing: { before: 40 } }), ...k.numbered(c.list, SZ)]) : [para(r(""))], W.at(-1), { verticalAlign: D.VerticalAlign.TOP })
   ] })));
@@ -2317,7 +2346,7 @@ async function summaryDocx(sd, showScores, withSign) {
       para(r(`評審委員：${sd.js.map(j => j.name).join("、") || "—"}（共 ${sd.js.length} 位）　　製表時間：${fmtDT(Date.now())}`)),
       new D.Table({ rows, width: { size: W.reduce((a, b) => a + b, 0), type: D.WidthType.DXA }, columnWidths: W, layout: D.TableLayoutType.FIXED }),
       ...(sd.cat.note ? [para(r(`備註：${sd.cat.note}`), { spacing: { before: 120 } })] : []),
-      para(r(`※ 平均為${catScorers(sd.cat).length ? "評分委員" : "已評分委員"}之算術平均（取至小數第二位）；${sd.res ? "名次及等第依評審會議決議。" : "名次依平均由高至低排列，同分同名次。"}`, { size: 20 })),
+      para(r(`※ 平均為${catScorers(sd.cat).length ? "評分委員" : "已評分委員"}之算術平均（取至小數第二位）；${sd.manual ? "名次及等第依評審會議決議。" : "名次依平均由高至低排列，同分同名次；尚未評分者不列名次。"}`, { size: 20 })),
       ...(withSign && sd.js.length ? await summarySignDocx(k, sd) : [])
     ] }]
   });
@@ -2694,7 +2723,7 @@ Views.live = (el, { catId }) => {
   function compute() {
     const sd = summaryData(catId); if (!sd) return null;
     const subJ = sd.sj.filter(j => isSubmitted(sd.cat.id, j.id));
-    if (useFinal) { const fd = finalData(catId); return { sd, subJ, use: sd.sj, fin: true, scale: fd.display !== "avg", list: fd.list.map((r, i) => ({ e: r.e, n: r.n, avg: r.avg, level: r.level, rank: i + 1, award: r.award })) }; }
+    if (useFinal) { const fd = finalData(catId); return { sd, subJ, use: sd.sj, fin: true, scale: fd.display !== "avg", list: fd.list.map(r => ({ e: r.e, n: r.n, avg: r.avg, level: r.level, rank: r.pos, award: r.award })) }; }
     const use = onlySub ? subJ : sd.sj;
     const rows = sd.rows.map(r => {
       const v = use.map(j => scoreOf(r.e.id, j.id)).filter(x => x);
@@ -2814,10 +2843,10 @@ function exportSummaryCsv(sd) { download(new Blob([summaryCsv(sd)], { type: "tex
    十二、管理後台
    ===================================================================== */
 Views.admin = (el, { tab }) => {
-  const TABS = [["overview", "總覽", "home"], ["settings", "評選設定", "gear"], ["cats", "類別與隊伍", "list"], ["refs", "評語與指標", "msg"], ["judges", "委員帳號", "users"], ["results", "評分結果", "chart"], ["records", "備份與紀錄", "clock"]];
+  const TABS = [["overview", "總覽", "home", ""], ["settings", "評選設定", "gear", "事前準備"], ["cats", "類別與隊伍", "list", "事前準備"], ["refs", "評語與指標", "msg", "事前準備"], ["judges", "委員帳號", "users", "事前準備"], ["results", "評分結果", "chart", "評審與結果"], ["records", "備份與紀錄", "clock", "資料管理"]];
   if (!TABS.find(t => t[0] === tab)) tab = "overview";
   el.innerHTML = topbarHTML() + `<main class="wrap wide"><div class="alayout ${ls.get("rj_nav_mini", false) ? "mini" : ""}" id="alay">
-    <nav class="anav" aria-label="管理功能">${TABS.map(([k, l, ic]) => `<a href="#/admin/${k}" data-nav="#/admin/${k}" title="${l}" ${k === tab ? 'aria-current="page"' : ""}>${I(ic)}<span class="al">${l}</span></a>`).join("")}
+    <nav class="anav" aria-label="管理功能">${TABS.map(([k, l, ic, g], i) => `${g && g !== TABS[i - 1][3] ? `<div class="anav-g" aria-hidden="true"><span>${g}</span></div>` : ""}<a href="#/admin/${k}" data-nav="#/admin/${k}" title="${l}" ${k === tab ? 'aria-current="page"' : ""}>${I(ic)}<span class="al">${l}</span></a>`).join("")}
       <button class="anav-tg" id="navTg" type="button">${I("left")}<span class="al">收合選單</span></button></nav>
     <section id="pane"></section></div></main>`;
   $("#navTg", el).onclick = () => { const a = $("#alay", el), m = !a.classList.contains("mini"); a.classList.toggle("mini", m); ls.set("rj_nav_mini", m); $("#navTg", el).setAttribute("aria-label", m ? "展開選單" : "收合選單"); dispatchEvent(new Event("resize")); };
@@ -2831,6 +2860,7 @@ const AdminTabs = {};
 AdminTabs.overview = pane => {
   pane.innerHTML = `<div class="page-head"><div><h1>總覽</h1><p>即時掌握評選開放狀態與各委員進度。</p></div>
     <div class="row"><button class="btn" data-nav="#/live">${I("chart", "sm")}投影即時排名</button><button class="btn primary" id="ovZip">${I("dl", "sm")}全部評分表下載（ZIP）</button></div></div>
+    <ol class="flow" id="flow" aria-label="評選流程"></ol>
     <div class="stats" id="stats"></div>
     <section class="card"><h2>委員評分進度</h2><p class="sub">數字為「已完成件數 / 參賽件數」（只寫意見的委員以「意見」標示）；${I("lock", "sm")} 表示該類別已確認送出。</p><div class="tbl-wrap" id="prog"></div></section>`;
   $("#ovZip", pane).onclick = () => { const c = sessionStorage.getItem("rj_res_cat"); zipModal(catOf(c) ? c : allCats()[0]?.id); };
@@ -2846,6 +2876,16 @@ AdminTabs.overview = pane => {
       <div class="stat"><div class="k">審查意見總數</div><div class="v">${S.comments.length}</div></div>
       <div class="stat"><div class="k">委員互看評分</div><div class="v" style="color:${peerMode() === "off" ? "var(--muted)" : "var(--primary)"}">${PEER_LABEL[peerMode()]}</div><div class="small muted"><a href="#/admin/settings" data-nav="#/admin/settings">到評選設定調整</a></div></div>`;
     const cats = allCats();
+    /* 評選流程：依目前資料自動判斷做到哪一步，點一下前往該功能 */
+    const need = js.reduce((a, j) => a + judgeCats(j).length, 0), subN = js.reduce((a, j) => a + judgeCats(j).filter(c => isSubmitted(c.id, j.id)).length, 0), lockN = cats.filter(c => resultOf(c.id)?.locked).length;
+    const steps = [
+      { t: "建立類別與名單", d: `${cats.length} 類・${S.entries.length} 件`, ok: cats.length > 0 && S.entries.length > 0, to: "cats" },
+      { t: "建立委員帳號", d: `${js.length} 位啟用中`, ok: js.length > 0, to: "judges" },
+      { t: "開放評分", d: st === "open" ? `開放中・${fmtDT(S.cfg.closeAt)} 截止` : st === "notyet" ? `${fmtDT(S.cfg.openAt)} 開放` : stTxt, ok: st === "open" || st === "ended", to: "settings" },
+      { t: "委員評分並送出", d: `已送出 ${subN} / ${need}`, ok: need > 0 && subN === need, to: "results" },
+      { t: "評定名次等第並鎖定", d: `已鎖定 ${lockN} / ${cats.length} 類`, ok: cats.length > 0 && lockN === cats.length, to: "results" }];
+    const curI = steps.findIndex(x => !x.ok);
+    setHTML($("#flow", pane), steps.map((x, i) => `<li class="${x.ok ? "done" : i === curI ? "cur" : ""}"><a href="#/admin/${x.to}" data-nav="#/admin/${x.to}" ${i === curI ? 'aria-current="step"' : ""}><span class="fl-n">${x.ok ? I("check", "sm") : i + 1}</span><span class="fl-b"><b>${x.t}</b><small>${esc(x.d)}${i === curI ? "・下一步" : ""}</small></span></a></li>`).join(""));
     pane._p = 1; setHTML($("#prog", pane), js.length ? `<table class="tbl"><thead><tr><th>委員</th>${cats.map(c => `<th class="num">${esc(c.name)}</th>`).join("")}</tr></thead><tbody>
       ${sortBy(js, "createdAt").map(j => `<tr><td><b>${esc(j.name)}</b><div class="small muted">${esc(j.username)}</div></td>${cats.map(c => {
         if (!judgeCats(j).some(x => x.id === c.id)) return `<td class="num muted">—</td>`;
@@ -3668,11 +3708,11 @@ AdminTabs.results = pane => {
     setHTML(rv, `<div class="card-h"><div><h2>評分彙整</h2><p class="sub" style="margin:2px 0 0">平均＝${catScorers(sd.cat).length ? "指定評分委員" : "已評分委員"}之平均；分數差距 ≥ 2 分以黃色標示，方便評審會議討論。</p></div>
       <div class="row"><button class="btn sm" data-r="csv">${I("dl", "sm")}匯出 CSV</button><button class="btn sm primary" data-nav="#/summary/${sd.cat.id}">${I("file", "sm")}預覽與輸出總表</button></div></div>
       <div class="tbl-wrap scroll">${splitTable("tbl dense", `<tr><th>編號</th><th>${esc(sd.cat.col1Label || "學校")}</th>${dbl ? `<th>${esc(sd.cat.col2Label)}</th>` : ""}
-        ${sd.sj.map(j => `<th class="num">${esc(j.name)}</th>`).join("")}<th class="num">平均</th><th class="num">${sd.res ? "決議名次" : "名次"}</th>${hasAw ? `<th class="num">等第</th>` : ""}<th class="num">差距</th><th class="num">意見</th></tr>`,
+        ${sd.sj.map(j => `<th class="num">${esc(j.name)}</th>`).join("")}<th class="num">平均</th><th class="num">${sd.manual ? "決議名次" : "名次"}</th>${hasAw ? `<th class="num">等第</th>` : ""}<th class="num">差距</th><th class="num">意見</th></tr>`,
         sd.rows.length ? sd.rows.map(r => { const v = r.sc.filter(x => x), g = v.length > 1 ? Math.max(...v) - Math.min(...v) : null;
           return `<tr data-row><td><b>${esc(r.e.code)}</b></td><td>${esc(r.e.org)}</td>${dbl ? `<td>${esc(r.e.name)}</td>` : ""}
           ${r.sc.map(x => `<td class="num">${x ? `<span class="pill s s${x}">${x}</span>` : '<span class="muted">—</span>'}</td>`).join("")}
-          <td class="num"><b>${r.avg != null ? fmtAvg(r.avg) : "—"}</b></td><td class="num">${(sd.res ? r.final : r.rank) || "—"}</td>${hasAw ? `<td class="num">${r.award ? awardBadge(sd.cat, r.award) : "—"}</td>` : ""}
+          <td class="num"><b>${r.avg != null ? fmtAvg(r.avg) : "—"}</b></td><td class="num">${(sd.manual ? r.final : r.rank) || "—"}</td>${hasAw ? `<td class="num">${r.award ? awardBadge(sd.cat, r.award) : "—"}</td>` : ""}
           <td class="num">${g == null ? '<span class="muted">—</span>' : g >= 2 ? `<span class="badge gap-badge" title="委員評分差距較大，建議討論">${I("alert", "sm")}${g}</span>` : g}</td>
           <td class="num">${r.cm.reduce((a, c) => a + c.list.length, 0)}</td></tr>`; }) : [`<tr><td colspan="10" class="empty">此類別尚無參賽資料</td></tr>`], fitCols(sd.rows.length, "sum"))}</div>`);
   }
@@ -3692,39 +3732,46 @@ AdminTabs.results = pane => {
         <div class="quota">${aw.length ? aw.map((x, i) => { const n = cnt(x.name); return `<span class="qchip a${Math.min(i + 1, 4)} ${x.quota && n > x.quota ? "over" : x.quota && n === x.quota ? "full" : ""}">${esc(x.name)} <b>${n}${x.quota ? " / " + x.quota : ""}</b></span>`; }).join("")
           : `<span class="small muted">${I("info", "sm")} 尚未設定獎項與名額，請到「類別與隊伍」→ 類別設定 ${I("gear", "sm")} 填寫（例：特優 4、優等 6）。</span>`}</div>
         <span class="spacer"></span>
-        <button class="btn sm" data-r="byavg" ${dis}>${I("sort", "sm")}依平均分數排序</button>
-        <button class="btn sm" data-r="suggest" ${aw.length && !lk ? "" : "disabled"}>${I("check", "sm")}依名額建議等第</button>
+        <button class="btn sm" data-r="byavg" ${lk || !fd.manual ? "disabled" : ""} title="${fd.manual ? "取消手動調整，名次改回依平均分數自動排列" : "目前已依平均分數自動排列"}">${I("sort", "sm")}依平均分數排序</button>
+        <button class="btn sm" data-r="suggest" ${aw.length && !lk && fd.nScored ? "" : "disabled"}>${I("check", "sm")}依名額建議等第</button>
         <button class="btn sm" data-r="clear" ${dis}>清除等第</button>
       </div>
       <div class="tbl-wrap scroll">${splitTable(`tbl dense ftbl ${lk ? "locked" : ""}`, `<tr><th class="c-drag" style="width:34px"></th><th class="num" style="width:58px">名次</th><th>編號</th><th>${esc(sd.cat.col1Label || "學校")}</th>${dbl ? `<th>${esc(sd.cat.col2Label)}</th>` : ""}
         <th class="num">平均</th>${scale ? `<th class="num" style="width:${fd.display === "level" ? 190 : 110}px">${fd.display === "level" ? "決議等級（5～1）" : "五點量表"}</th>` : ""}<th class="num c-js">各委員</th><th style="width:150px">等第</th><th class="c-note">備註</th><th class="num c-adj" style="width:96px">調整</th></tr>`,
-        fd.list.length ? fd.list.map((r, i) => `<tr data-row data-eid="${r.e.id}" draggable="${!lk}" class="${r.award ? "aw" + (aw.findIndex(x => x.name === r.award) + 1) : ""}">
-          <td class="drag" title="${lk ? "已鎖定" : "拖曳調整名次"}" aria-hidden="true">${lk ? I("lock", "sm") : "⋮⋮"}</td><td class="num"><span class="fpos">${i + 1}</span></td><td><b>${esc(r.e.code)}</b></td><td>${esc(r.e.org)}</td>${dbl ? `<td>${esc(r.e.name)}</td>` : ""}
+        fd.list.length ? fd.list.map((r, i) => `<tr data-row data-eid="${r.e.id}" draggable="${!lk && !!r.pos}" class="${r.award ? "aw" + (aw.findIndex(x => x.name === r.award) + 1) : ""}${r.pos ? "" : " unrated"}">
+          <td class="drag" title="${lk ? "已鎖定" : r.pos ? "拖曳調整名次" : "尚未評分"}" aria-hidden="true">${lk ? I("lock", "sm") : r.pos ? "⋮⋮" : ""}</td><td class="num">${r.pos ? `<span class="fpos">${r.pos}</span>` : `<span class="fpos none" title="尚未評分，不列名次">—</span>`}</td><td><b>${esc(r.e.code)}</b></td><td>${esc(r.e.org)}</td>${dbl ? `<td>${esc(r.e.name)}</td>` : ""}
           <td class="num"><b>${r.avg != null ? fmtAvg(r.avg) : "—"}</b>${i && fd.list[i - 1].avg != null && r.avg != null && Math.abs(fd.list[i - 1].avg - r.avg) < 1e-9 ? '<span class="badge" title="與上一名平均相同" style="margin-left:4px">同分</span>' : ""}</td>
           ${scale ? `<td class="num">${fd.display === "level" ? `<span class="lvl-pick" role="radiogroup" aria-label="${esc(r.e.org)} 決議等級">${[5, 4, 3, 2, 1].map(v => `<button class="lv${r.level === v ? " on" : ""}${r.level === v && !r.levelSet ? " auto" : ""}" data-r="lvl" data-v="${v}" role="radio" aria-checked="${r.level === v}" ${dis} title="${v} 分・${scaleLabel(v)}${r.level === v && !r.levelSet ? "（依平均換算，尚未決議）" : ""}">${v}</button>`).join("")}</span>`
             : `<span class="lv-show">${r.level ? `■ ${r.level}　<small>${scaleLabel(r.level)}</small>` : "—"}</span>`}</td>` : ""}
           <td class="num small c-js">${r.sc.map(x => x || "–").join("・")}</td>
           <td><select class="input sm fawd" data-eid="${r.e.id}" aria-label="${esc(r.e.org)} 等第" ${dis}><option value="">—</option>${aw.map(x => `<option ${x.name === r.award ? "selected" : ""}>${esc(x.name)}</option>`).join("")}${r.award && !aw.some(x => x.name === r.award) ? `<option selected>${esc(r.award)}</option>` : ""}</select></td>
           <td class="c-note"><input class="input sm fnote" data-eid="${r.e.id}" value="${esc(r.note)}" placeholder="${lk ? "" : "（選填）"}" aria-label="${esc(r.e.org)} 備註" ${dis}></td>
-          <td class="num nowrap c-adj"><button class="btn ghost icon sm" data-r="up" aria-label="名次上移" ${i === 0 || lk ? "disabled" : ""}>${I("up", "sm")}</button><button class="btn ghost icon sm" data-r="down" aria-label="名次下移" ${i === fd.list.length - 1 || lk ? "disabled" : ""}>${I("down", "sm")}</button></td></tr>`)
+          <td class="num nowrap c-adj"><button class="btn ghost icon sm" data-r="up" aria-label="名次上移" ${i === 0 || lk || !r.pos ? "disabled" : ""}>${I("up", "sm")}</button><button class="btn ghost icon sm" data-r="down" aria-label="名次下移" ${!r.pos || i >= fd.nScored - 1 || lk ? "disabled" : ""}>${I("down", "sm")}</button></td></tr>`)
           : [`<tr><td colspan="10" class="empty">此類別尚無參賽資料</td></tr>`], fitCols(fd.list.length, "final"))}</div>
-      <p class="small muted" style="margin:8px 0 0">${fd.res?.updatedAt ? `上次儲存：${fmtDT(fd.res.updatedAt)}` : "尚未調整：目前依平均分數排序。"}</p>`);
+      <p class="small muted" style="margin:8px 0 0">${!fd.nScored ? "目前還沒有任何評分，所以沒有名次；委員開始評分後，會依平均分數自動排出名次。" : (fd.manual ? "名次已依評審會議手動調整。" : "名次目前依平均分數自動排列，尚未手動調整。") + (fd.nScored < fd.list.length ? `尚未評分的 ${fd.list.length - fd.nScored} 件不列名次，排在最後。` : "")}${fd.res?.updatedAt ? `　上次儲存：${fmtDT(fd.res.updatedAt)}` : ""}</p>`);
   }
   /** 寫入評定結果；logs：要一併寫入的操作紀錄 */
   function saveResult(mut, logs = [], force) {
     const fd = finalData(sel), cur = fd.res || {};
     if (cur.locked && !force) { toast("評定結果已鎖定，請先解除鎖定", "error"); rv._h = null; render(); return; }
-    const doc = { order: fd.list.map(x => x.e.id), awards: { ...(cur.awards || {}) }, notes: { ...(cur.notes || {}) }, display: cur.display || "avg", levels: { ...(cur.levels || {}) }, locked: !!cur.locked, lockedAt: cur.lockedAt || 0, lockedBy: cur.lockedBy || "", updatedAt: Date.now() };
+    const doc = resDoc(fd, cur);
     mut(doc);
     const i = S.results.findIndex(r => r.id === sel); const rec = { id: sel, ...doc };
     if (i >= 0) S.results[i] = rec; else S.results.push(rec);
     rv._h = null; render();
     return W(B.batch([{ op: "set", c: "results", id: sel, d: doc }, ...logs.map(l => auditOp(l.act, { catId: sel, ...l }))])).catch(() => {});
   }
+  /** 評定結果文件：order 只記「已評分」隊伍的順序；manual＝名次是否經手動調整（否則依平均自動排列） */
+  function resDoc(fd, cur) {
+    const d = { order: fd.list.filter(x => x.pos).map(x => x.e.id), awards: { ...(cur.awards || {}) }, notes: { ...(cur.notes || {}) }, display: cur.display || "avg", levels: { ...(cur.levels || {}) }, locked: !!cur.locked, lockedAt: cur.lockedAt || 0, lockedBy: cur.lockedBy || "", updatedAt: Date.now() };
+    if (cur.manual !== undefined || !cur.locked) d.manual = !!cur.manual;   // 舊版已鎖定的資料不新增欄位（鎖定中只能改鎖定欄位）
+    return d;
+  }
   function moveTo(id, targetIdx) {
-    const l = finalData(sel).list.map(x => x.e.id), from = l.indexOf(id) + 1, to = Math.max(0, Math.min(targetIdx, l.length - 1)) + 1;
+    const l = finalData(sel).list.filter(x => x.pos).map(x => x.e.id), from = l.indexOf(id) + 1; if (!from) return;
+    const to = Math.max(0, Math.min(targetIdx, l.length - 1)) + 1;
     if (from === to) return;
-    saveResult(d => { const o = d.order.filter(x => x !== id); o.splice(to - 1, 0, id); d.order = o; }, [{ act: "result.move", entryId: id, from: `第 ${from} 名`, to: `第 ${to} 名` }]);
+    saveResult(d => { const o = l.filter(x => x !== id); o.splice(to - 1, 0, id); d.order = o; d.manual = true; }, [{ act: "result.move", entryId: id, from: `第 ${from} 名`, to: `第 ${to} 名` }]);
   }
   /** 輸出：評定結果表／綜合評分表（同 115 格式） */
   function outModal(fd) {
@@ -3773,13 +3820,13 @@ AdminTabs.results = pane => {
     if (act === "lockR") {
       if (!await confirmDialog(`鎖定「${sd.cat.name}」的評定結果？\n鎖定後名次、等第與備註都不能再調整（可由管理者解除，並會留下紀錄）。`, { ok: "鎖定", title: "鎖定評定結果" })) return;
       const fd = finalData(sel);
-      return saveResult(d => { d.locked = true; d.lockedAt = Date.now(); d.lockedBy = S.me?.name || ""; }, [{ act: "result.lock", detail: fd.list.filter(x => x.award).map(x => `${x.e.code}${x.award}`).join("、").slice(0, 400) }], true);
+      return saveResult(d => { d.locked = true; d.manual = true; d.lockedAt = Date.now(); d.lockedBy = S.me?.name || ""; }, [{ act: "result.lock", detail: fd.list.filter(x => x.award).map(x => `${x.e.code}${x.award}`).join("、").slice(0, 400) }], true);
     }
     if (act === "unlockR") {
       if (!await confirmDialog(`解除「${sd.cat.name}」評定結果的鎖定？\n解除後即可再調整名次與等第，此動作會留下紀錄。`, { ok: "解除鎖定", danger: true })) return;
       return saveResult(d => { d.locked = false; d.unlockedAt = Date.now(); d.unlockedBy = S.me?.name || ""; }, [{ act: "result.unlock" }], true);
     }
-    if (act === "byavg") { if (finalData(sel).res && !await confirmDialog("依平均分數重新排序？目前手動調整的名次會被取代（等第保留）。")) return; return saveResult(d => { d.order = sd.rows.slice().sort(byAvg).map(r => r.e.id); }, [{ act: "result.bulk", detail: "依平均分數重新排序" }]); }
+    if (act === "byavg") { if (!await confirmDialog("改回依平均分數排序？目前手動調整的名次會被取代（等第保留）。")) return; return saveResult(d => { d.order = sd.rows.filter(r => r.avg != null).sort(byAvg).map(r => r.e.id); d.manual = false; }, [{ act: "result.bulk", detail: "依平均分數重新排序" }]); }
     if (act === "suggest") {
       const fd = finalData(sel); if (Object.values(fd.res?.awards || {}).some(Boolean) && !await confirmDialog("依目前名次與名額重新建議等第？已選的等第會被取代。")) return;
       return saveResult(d => { d.awards = {}; let k = 0; fd.awards.forEach(a => { for (let n = 0; n < (a.quota || 0) && k < fd.list.length; n++, k++) { if (fd.list[k].avg == null) { k = fd.list.length; break; } d.awards[fd.list[k].e.id] = a.name; } }); }, [{ act: "result.bulk", detail: "依名額建議等第：" + fd.awards.map(a => a.name + a.quota).join("、") }]);
@@ -3796,7 +3843,7 @@ AdminTabs.results = pane => {
     clearTimeout(noteT[id]); noteT[id] = setTimeout(() => { const v = n.value.trim(); const keep = document.activeElement === n;
       const fd = finalData(sel), cur = fd.res || {}; if (cur.locked) return;
       const old = cur.notes?.[id] || ""; if (old === v) return;
-      const doc = { order: fd.list.map(x => x.e.id), awards: { ...(cur.awards || {}) }, notes: { ...(cur.notes || {}), [id]: v }, display: cur.display || "avg", levels: { ...(cur.levels || {}) }, locked: false, lockedAt: cur.lockedAt || 0, lockedBy: cur.lockedBy || "", updatedAt: Date.now() };
+      const doc = resDoc(fd, cur); doc.notes[id] = v;
       const i = S.results.findIndex(r => r.id === sel); if (i >= 0) S.results[i] = { id: sel, ...doc }; else S.results.push({ id: sel, ...doc });
       W(B.batch([{ op: "set", c: "results", id: sel, d: doc }, auditOp("result.note", { catId: sel, entryId: id, from: old, to: v })])).catch(() => {}); if (!keep) { rv._h = null; render(); } }, 900);
   });
@@ -3831,11 +3878,13 @@ AdminTabs.results = pane => {
 const byAvg = (a, b) => (b.avg ?? -1) - (a.avg ?? -1) || (a.e.order || 0) - (b.e.order || 0);
 function finalData(catId) {
   const sd = summaryData(catId); if (!sd) return null;
-  const list = sd.res ? sd.rows.slice().sort((a, b) => a.final - b.final) : sd.rows.slice().sort(byAvg);
+  /* 已評分的隊伍才排名次（手動調整過依決議順序，否則依平均）；尚未評分的依編號排在最後、不列名次 */
+  const sc = sd.rows.filter(r => r.avg != null), un = sd.rows.filter(r => r.avg == null).sort((a, b) => (a.e.order || 0) - (b.e.order || 0));
+  const list = [...(sd.manual ? sc.sort((a, b) => a.final - b.final) : sc.sort(byAvg)), ...un];
   const display = sd.res?.display || "avg";
-  return { sd, res: sd.res, display, awards: parseAwards(sd.cat.awards), list: list.map(r => {
+  return { sd, res: sd.res, manual: sd.manual, nScored: sc.length, display, awards: parseAwards(sd.cat.awards), list: list.map((r, i) => {
     const set = display === "level" && sd.res?.levels?.[r.e.id] != null;
-    return { ...r, award: r.award || "", note: sd.res?.notes?.[r.e.id] || "", level: set ? sd.res.levels[r.e.id] : lvlOf(r.avg), levelSet: set };
+    return { ...r, pos: r.avg != null ? i + 1 : null, award: r.award || "", note: sd.res?.notes?.[r.e.id] || "", level: set ? sd.res.levels[r.e.id] : lvlOf(r.avg), levelSet: set };
   }) };
 }
 /** 平均分數換算五點量表（四捨五入：4.5 以上為 5） */
@@ -3853,7 +3902,7 @@ function finalHTML(fd) {
     <p>評分委員：${sd.sj.map(j => esc(j.name)).join("、") || "—"}　　製表時間：${fmtDT(Date.now())}</p>
     <table><colgroup>${W.map(w => `<col style="width:${(w / tot * 100).toFixed(2)}%">`).join("")}</colgroup>
       <thead><tr><th>名次</th><th>編號</th><th>${esc(sd.cat.col1Label || (dbl ? "機關學校" : "學校"))}</th>${dbl ? `<th>${esc(sd.cat.col2Label || "團體名稱")}</th>` : ""}<th>平均分數</th><th>等第</th><th>備註</th></tr></thead>
-      <tbody>${fd.list.map((r, i) => `<tr><td>${i + 1}</td><td>${esc(r.e.code)}</td><td>${esc(r.e.org)}</td>${dbl ? `<td>${esc(r.e.name || "")}</td>` : ""}<td>${fmtAvg(r.avg)}</td><td><b>${esc(r.award)}</b></td><td class="op">${esc(r.note)}</td></tr>`).join("")}</tbody>
+      <tbody>${fd.list.map(r => `<tr><td>${r.pos || ""}</td><td>${esc(r.e.code)}</td><td>${esc(r.e.org)}</td>${dbl ? `<td>${esc(r.e.name || "")}</td>` : ""}<td>${fmtAvg(r.avg)}</td><td><b>${esc(r.award)}</b></td><td class="op">${esc(r.note)}</td></tr>`).join("")}</tbody>
     </table>
     ${sum ? `<p class="s-note">獎項統計：${esc(sum)}</p>` : ""}
     ${sd.cat.note ? `<p>備註：${esc(sd.cat.note)}</p>` : ""}
@@ -3871,7 +3920,7 @@ function finalHTMLScale(fd) {
     <table><colgroup>${W.map(w => `<col style="width:${(w / tot * 100).toFixed(2)}%">`).join("")}</colgroup>
       <thead><tr><th rowspan="2">名次</th><th rowspan="2">編號</th><th rowspan="2">${esc(sd.cat.col1Label || (dbl ? "機關學校" : "學校"))}</th>${dbl ? `<th rowspan="2">${esc(sd.cat.col2Label || "團體名稱")}</th>` : ""}<th colspan="5">評分</th><th rowspan="2">等第</th><th rowspan="2">備註</th></tr>
       <tr><th>5</th><th>4</th><th>3</th><th>2</th><th>1</th></tr></thead>
-      <tbody>${fd.list.map((r, i) => `<tr><td>${i + 1}</td><td>${esc(r.e.code)}</td><td>${esc(r.e.org)}</td>${dbl ? `<td>${esc(r.e.name || "")}</td>` : ""}${[5, 4, 3, 2, 1].map(v => `<td>${r.level === v ? "■" : ""}</td>`).join("")}<td><b>${esc(r.award)}</b></td><td class="op">${esc(r.note)}</td></tr>`).join("")}</tbody>
+      <tbody>${fd.list.map(r => `<tr><td>${r.pos || ""}</td><td>${esc(r.e.code)}</td><td>${esc(r.e.org)}</td>${dbl ? `<td>${esc(r.e.name || "")}</td>` : ""}${[5, 4, 3, 2, 1].map(v => `<td>${r.level === v ? "■" : ""}</td>`).join("")}<td><b>${esc(r.award)}</b></td><td class="op">${esc(r.note)}</td></tr>`).join("")}</tbody>
     </table>
     ${sum ? `<p class="s-note">獎項統計：${esc(sum)}</p>` : ""}
     ${sd.cat.note ? `<p>備註：${esc(sd.cat.note)}</p>` : ""}
@@ -3898,14 +3947,14 @@ async function finalDocx(fd) {
   if (!scale) {
     const heads = [...lead, "平均分數", "等第", "備註"];
     rows = [new D.TableRow({ tableHeader: true, children: heads.map((t, i) => cell([para(run(t), C)], W[i])) }),
-      ...fd.list.map((r, i) => new D.TableRow({ cantSplit: true, children: [String(i + 1), r.e.code, r.e.org, ...(dbl ? [r.e.name || ""] : []), fmtAvg(r.avg), r.award, r.note]
+      ...fd.list.map(r => new D.TableRow({ cantSplit: true, children: [String(r.pos || ""), r.e.code, r.e.org, ...(dbl ? [r.e.name || ""] : []), fmtAvg(r.avg), r.award, r.note]
         .map((t, j) => cell([para(run(String(t || ""), j === heads.length - 2 ? { bold: true } : {}), j === heads.length - 1 ? {} : C)], W[j])) }))];
   } else {
     rows = [new D.TableRow({ tableHeader: true, children: [...lead.map((t, i) => cell([para(run(t), C)], W[i], { rowSpan: 2 })), cell([para(run("評分"), C)], 2250, { columnSpan: 5 }),
         cell([para(run("等第"), C)], W[nL + 5], { rowSpan: 2 }), cell([para(run("備註"), C)], W[nL + 6], { rowSpan: 2 })] }),
       new D.TableRow({ tableHeader: true, children: [5, 4, 3, 2, 1].map(v => cell([para(run(String(v)), C)], 450)) }),
-      ...fd.list.map((r, i) => new D.TableRow({ cantSplit: true, children: [
-        ...[String(i + 1), r.e.code, r.e.org, ...(dbl ? [r.e.name || ""] : [])].map((t, j) => cell([para(run(t), C)], W[j])),
+      ...fd.list.map(r => new D.TableRow({ cantSplit: true, children: [
+        ...[String(r.pos || ""), r.e.code, r.e.org, ...(dbl ? [r.e.name || ""] : [])].map((t, j) => cell([para(run(t), C)], W[j])),
         ...[5, 4, 3, 2, 1].map(v => cell([para(run(r.level === v ? "■" : ""), C)], 450)),
         cell([para(run(r.award || "", { bold: true }), C)], W[nL + 5]), cell([para(run(r.note || ""))], W[nL + 6])] }))];
   }
@@ -4568,7 +4617,7 @@ async function exportBackup(silent) {
       const out = [], g = {}; data.comments.slice().sort((a, b) => byEnt(a, b) || String(a.judgeUid).localeCompare(b.judgeUid) || (a.order || 0) - (b.order || 0)).forEach(c => { const k = c.entryId + c.judgeUid; g[k] = (g[k] || 0) + 1; out.push([catN(c.catId), ent(c.entryId).code || "", ent(c.entryId).org || "（已刪除）", c.judgeName || jN(c.judgeUid), g[k], c.text, fmtDTs(c.createdAt), fmtDTs(c.updatedAt)]); }); return out; })(), [22, 10, 24, 12, 6, 60, 20, 20]);
     add("送出狀態", ["委員", "類別", "狀態", "送出時間", "解鎖時間"], data.submissions.map(s => [jN(s.judgeUid), catN(s.catId), s.submitted ? "已送出" : "已解鎖", fmtDTs(s.at), s.unlockedAt ? fmtDTs(s.unlockedAt) : ""]), [12, 22, 8, 20, 20]);
     add("評定結果", ["類別", "名次", "編號", "學校", "團體名稱／姓名", "平均", "等第", "備註", "鎖定"], cats.flatMap(c => { const fd = finalData(c.id); if (!fd) return [];
-      return fd.list.map((r, i) => [c.name, fd.res ? i + 1 : (r.rank || ""), r.e.code, r.e.org, r.e.name || "", fmtAvg(r.avg), r.award || "", r.note || "", fd.res?.locked ? `已鎖定 ${fmtDTs(fd.res.lockedAt)}` : ""]); }), [22, 6, 10, 24, 18, 8, 10, 30, 22]);
+      return fd.list.map(r => [c.name, r.pos || "", r.e.code, r.e.org, r.e.name || "", fmtAvg(r.avg), r.award || "", r.note || "", fd.res?.locked ? `已鎖定 ${fmtDTs(fd.res.lockedAt)}` : ""]); }), [22, 6, 10, 24, 18, 8, 10, 30, 22]);
     add("委員帳號", ["姓名", "帳號", "角色", "啟用", "可評類別", "電子簽名", "建立時間"], [...data.admins.map(a => [a.name, a.username, "管理者", "是", "—", "—", fmtDTs(a.createdAt)]),
       ...sortBy(data.judges, "createdAt").map(j => [j.name, j.username, "評審委員", j.enabled ? "是" : "否", (j.categories || []).length ? j.categories.map(catN).join("、") : "全部類別", j.signature ? "有" : "無", fmtDTs(j.createdAt)])], [12, 16, 10, 6, 30, 8, 20]);
     add("操作紀錄", ["時間", "人員", "角色", "動作", "類別", "對象", "變更前", "變更後", "說明"], sortBy(data.audit, "at").map(x => [fmtDTs(x.at), x.name, x.role === "admin" ? "管理者" : "委員", (ACT[x.act] || [x.act])[0], x.catName, x.entryLabel || x.targetName || "", x.from, x.to, x.detail]), [20, 12, 8, 12, 20, 24, 30, 30, 30]);
