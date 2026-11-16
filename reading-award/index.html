@@ -944,6 +944,16 @@ table.heat{border-collapse:separate;border-spacing:0}
 .heat tfoot td,.heat tfoot th{background:#f3f6f7;border-top:1px solid var(--line-strong);padding-top:10px;padding-bottom:10px}
 .heat tfoot small{display:block;font-size:11.5px;color:var(--muted);font-weight:400}
 .heat tfoot .hm-avg small{display:inline}
+
+/* ---------- 意見輸入框（欄位內自動編號）、簽名檔 ---------- */
+#cin{font-variant-numeric:tabular-nums;line-height:1.9}
+.cin-help{display:flex;flex-wrap:wrap;gap:4px 16px;margin:6px 0 0;font-size:calc(12.5px*var(--fz,1));color:var(--muted)}
+kbd{display:inline-block;padding:0 6px;border:1px solid var(--line-strong);border-bottom-width:2px;border-radius:5px;background:#fff;font:inherit;font-size:.9em;line-height:1.5;color:var(--ink)}
+.cl-hint kbd{font-weight:400}
+.sig-prev{display:grid;place-items:center;min-height:120px;padding:16px;border:1px dashed var(--line-strong);border-radius:10px;background:#fff}
+.sig-prev img{max-width:100%;max-height:160px}
+.sig-cell{white-space:nowrap}
+.sig-th{height:30px;max-width:110px;object-fit:contain;vertical-align:middle;margin-right:6px}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 @media print{.no-print{display:none!important}}
 </style>
@@ -1441,6 +1451,25 @@ const shortTitle = () => S.cfg?.shortTitle || (S.cfg?.title || DEFAULT_TITLE).re
 const IN_APP = /\bLine\/|FBAN|FBAV|Instagram|MicroMessenger/i.test(navigator.userAgent);
 const NUM_RE = /^\s*(?:\d{1,2}\s*[\.．、\)）]|[（(]\s*\d{1,2}\s*[)）]|[一二三四五六七八九十]{1,3}\s*[、．.])\s*/;
 const stripNum = t => t.replace(NUM_RE, "").trim() || t.trim();
+/* ---------- 意見輸入框：欄位內自動編號（每行開頭的「1. 」「2. 」代表一則；沒有編號的行＝同一則內換行） ---------- */
+const ITEM_RE = /^\s*(?:\d{1,2}\s*[\.．、\)）](?!\d)|[（(]\s*\d{1,2}\s*[)）]|[一二三四五六七八九十]{1,3}\s*[、．])\s*/;
+function parseItems(v) {
+  const items = [];
+  String(v || "").split("\n").forEach(line => { if (ITEM_RE.test(line)) items.push(line.replace(ITEM_RE, "")); else if (items.length) items[items.length - 1] += "\n" + line; else if (line.trim()) items.push(line); });
+  return items.map(t => t.trim()).filter(Boolean);
+}
+const itemsText = (items, start) => items.map((t, i) => `${start + i}. ${t}`).join("\n");
+/** 重新編號（從 start 起），並盡量維持游標位置；內容沒變就不動輸入框 */
+function renumber(ta, start) {
+  const v = ta.value, cs = ta.selectionStart ?? v.length; let n = start, pos = 0, np = 0, nc = null; const out = [];
+  v.split("\n").forEach((line, i) => {
+    const m = line.match(ITEM_RE), num = m || i === 0, old = m ? m[0].length : 0, pre = num ? `${n++}. ` : "", nl = num ? pre + line.slice(old) : line;
+    if (nc == null && cs <= pos + line.length) nc = num ? np + pre.length + Math.max(0, cs - pos - old) : np + (cs - pos);
+    out.push(nl); pos += line.length + 1; np += nl.length + 1;
+  });
+  const nv = out.join("\n"); if (nv === v) return;
+  ta.value = nv; if (document.activeElement === ta) ta.setSelectionRange(nc ?? nv.length, nc ?? nv.length);
+}
 /** 若貼上的是「1. … 2. …」多點內容，拆成多則 */
 function splitNumbered(t) {
   const lines = t.split(/\n+/).map(x => x.trim()).filter(Boolean);
@@ -1844,8 +1873,9 @@ Views.entry = (el, { entryId }) => {
             <div class="card-h"><h2 id="h-cm">審查意見 <span class="pill" id="cmCount">0</span></h2><span class="sstate" id="cmState" aria-live="polite"></span></div>
             <ol class="clist" id="clist"></ol>
             <div class="composer" id="composer">
-              <label class="cl" for="cin">${I("plus", "sm")}<span id="cinLabel">新增第 1 則意見</span><span class="cl-hint hide-m">　可將右側參考評語拖曳到這裡</span></label>
-              <textarea id="cin" placeholder="請輸入審查意見…（儲存後自動編號，不必輸入 1.、2.）"></textarea>
+              <label class="cl" for="cin">${I("plus", "sm")}<span id="cinLabel">新增審查意見</span><span class="cl-hint">　直接輸入，按 <kbd>Enter</kbd> 自動編下一則，可一次寫好幾則再一起儲存</span></label>
+              <textarea id="cin" spellcheck="false" aria-describedby="cinHelp"></textarea>
+              <p class="cin-help" id="cinHelp"><span><kbd>Enter</kbd> 下一則</span><span><kbd>Shift</kbd>+<kbd>Enter</kbd> 同一則內換行</span><span class="hide-m">可將右側參考評語拖曳進來</span></p>
               <div class="bar2">
                 <span class="sstate" id="draftHint"></span><span class="spacer"></span>
                 <span class="small muted kbd-hint">Ctrl + Enter 儲存</span>
@@ -1872,7 +1902,7 @@ Views.entry = (el, { entryId }) => {
     <nav class="mbar show-m" aria-label="切換學校"><button class="btn" id="prevB3">${I("left")}上一校</button><span class="pos" id="pos3"></span><button class="btn todo-b" id="todoB3" hidden></button><button class="btn primary" id="nextB3">下一校${I("right")}</button></nav>`;
     mounted = true;
     const cin = $("#cin", el);
-    cin.value = ls.get(draftKey(entryId), "") || "";
+    cin.value = ls.get(draftKey(entryId), "") || ""; renumber(cin, nextNo());
     $("#scale", el).addEventListener("click", ev => { const b = ev.target.closest("[data-v]"); if (b) setScore(+b.dataset.v); });
     $("#scale", el).addEventListener("keydown", ev => {
       const cur = scoreOf(entryId) || 0; let n = null;
@@ -1888,13 +1918,36 @@ Views.entry = (el, { entryId }) => {
     };
     /* 輸入框自動長高；手機輸入時隱藏底部換校列並捲到輸入框 */
     const growCin = () => { if (innerWidth >= 900) { cin.style.height = ""; return; } cin.style.height = "auto"; cin.style.height = Math.max(180, cin.scrollHeight + 4) + "px"; };
-    cin.addEventListener("input", () => { ls.set(draftKey(entryId), cin.value); renderDraft(); growCin(); });
+    /* 欄位內自動編號：Enter＝下一則（自動帶出編號）、Shift+Enter＝同一則內換行、在空白編號按 Backspace＝併回上一則 */
+    let composing = false, soft = false;
+    const lineAt = () => { const v = cin.value, c = cin.selectionStart, a = v.lastIndexOf("\n", c - 1) + 1, b = v.indexOf("\n", c); return { a, b: b < 0 ? v.length : b, c, text: v.slice(a, b < 0 ? v.length : b) }; };
+    const afterEdit = () => { if (!composing) renumber(cin, nextNo()); parseItems(cin.value).length ? ls.set(draftKey(entryId), cin.value) : ls.del(draftKey(entryId)); renderDraft(); growCin(); };
+    cin.addEventListener("compositionstart", () => { composing = true; cin.dataset.ime = "1"; });
+    cin.addEventListener("compositionend", () => { composing = false; delete cin.dataset.ime; afterEdit(); });
+    cin.addEventListener("keydown", ev => {
+      if (ev.isComposing || composing || ev.keyCode === 229 || ev.ctrlKey || ev.metaKey || ev.altKey) return;
+      if (ev.key === "Enter") {
+        if (ev.shiftKey) { soft = true; return; }
+        ev.preventDefault(); const L = lineAt(), m = L.text.match(ITEM_RE);
+        if (m && !L.text.slice(m[0].length).trim()) return;                 // 這一則還是空的：不再往下新增
+        cin.setRangeText("\n0. ", cin.selectionStart, cin.selectionEnd, "end"); afterEdit(); cin.scrollTop = cin.scrollHeight;
+      } else if (ev.key === "Backspace" && cin.selectionStart === cin.selectionEnd) {
+        const L = lineAt(), m = L.text.match(ITEM_RE);
+        if (m && L.c - L.a <= m[0].length) { ev.preventDefault(); if (L.a > 0) { cin.setRangeText("", L.a - 1, L.a + m[0].length, "end"); afterEdit(); } }
+      }
+    });
+    cin.addEventListener("input", ev => {
+      /* 手機鍵盤的換行不一定會觸發 keydown：在這裡補上編號 */
+      if (!composing && !soft && (ev.inputType === "insertLineBreak" || ev.inputType === "insertParagraph")) { const L = lineAt(); if (!ITEM_RE.test(L.text)) cin.setRangeText("0. ", L.a, L.a, "end"); }
+      soft = false; afterEdit();
+    });
+    cin.addEventListener("focus", () => { if (!parseItems(cin.value).length) { renumber(cin, nextNo()); cin.setSelectionRange(cin.value.length, cin.value.length); } });
     cin.addEventListener("focus", () => { if (innerWidth < 900) { document.body.classList.add("typing"); setTimeout(() => $("#composer", el)?.scrollIntoView({ block: "start", behavior: "smooth" }), 320); } });
     cin.addEventListener("blur", () => setTimeout(() => document.body.classList.remove("typing"), 150));
     setTimeout(growCin, 0);
     cin.addEventListener("keydown", ev => { if (ev.key === "Enter" && (ev.ctrlKey || ev.metaKey)) { ev.preventDefault(); addComment(); } });
     $("#saveB", el).onclick = () => addComment();
-    $("#clrB", el).onclick = async () => { if (!cin.value.trim()) return; if (await confirmDialog("清除輸入框中尚未儲存的文字？")) { cin.value = ""; ls.del(draftKey(entryId)); renderDraft(); cin.focus(); } };
+    $("#clrB", el).onclick = async () => { if (!parseItems(cin.value).length) return; if (await confirmDialog("清除輸入框中尚未儲存的文字？")) { cin.value = ""; renumber(cin, nextNo()); ls.del(draftKey(entryId)); renderDraft(); cin.focus(); } };
     $("#clist", el).addEventListener("click", onListClick);
     $("#mTabs", el).addEventListener("click", ev => { const b = ev.target.closest("[data-p]"); if (b) { mp = b.dataset.p; if (mp !== "work") side = mp; layout(); scrollTo(0, 0); } });
     $("#sideTab", el).addEventListener("click", ev => { const b = ev.target.closest("[data-s]"); if (b) { side = b.dataset.s; ls.set("rj_side", side); layout(); } });
@@ -1938,15 +1991,18 @@ Views.entry = (el, { entryId }) => {
         ${cm ? `<ol>${cm.list.map(t => `<li>${esc(t)}</li>`).join("")}</ol>` : `<p class="small muted">尚無審查意見</p>`}</div>`; }).join("") : `<p class="small muted">${S.peer.err ? "目前無法讀取其他委員的資料，請洽管理者。" : "本類別尚無其他委員。"}</p>`)
       + `<div class="pb-foot"><button class="btn sm" data-nav="#/peer/${en.catId}">${I("users", "sm")}查看本類別全部對照</button></div>`);
   }
-  /** 參考評語放入輸入框（接在既有文字後），手機版自動切回輸入畫面 */
+  const nextNo = () => commentsOf(entryId).length + 1;
+  /** 在輸入框最後加一則（自動帶編號） */
+  function appendItem(text) { const c = $("#cin", el); if (!c) return 0; const items = [...parseItems(c.value), stripNum(text)]; c.value = itemsText(items, nextNo()); return nextNo() + items.length - 1; }
+  /** 參考評語放入輸入框（成為新的一則），手機版自動切回輸入畫面 */
   function applyRef(text) {
     if (!canEdit(e().catId)) { toast(lockReason(e().catId), "error"); return; }
-    const c = $("#cin", el); const v = c.value.replace(/\s+$/, "");
-    c.value = v ? v + "\n" + text : text; c.dispatchEvent(new Event("input", { bubbles: true }));
+    const c = $("#cin", el), no = appendItem(text);
+    c.dispatchEvent(new Event("input", { bubbles: true }));
     if (mp !== "work") { mp = "work"; layout(); }
     c.focus(); c.setSelectionRange(c.value.length, c.value.length);
     $("#composer", el).classList.add("flash"); setTimeout(() => $("#composer", el)?.classList.remove("flash"), 700);
-    toast("已放入輸入框，可修改後按「儲存意見」");
+    toast(`已加入為第 ${no} 則，可修改後按「儲存意見」`);
   }
   /** 版面：電腦／平板橫向＝左右兩欄，同一畫面；手機＝上方頁籤切換 */
   function layout() {
@@ -2012,22 +2068,13 @@ Views.entry = (el, { entryId }) => {
   async function addComment() {
     const en = e(), cin = $("#cin", el);
     if (!en || !cin || adding) return false;
-    const raw = cin.value.trim();
-    if (!raw) { cin.focus(); toast("請先輸入意見內容"); return false; }
+    const items = parseItems(cin.value);            // 欄位裡每個編號就是一則，直接逐則儲存
+    if (!items.length) { cin.focus(); toast("請先輸入意見內容"); return false; }
     if (!canEdit(en.catId)) { toast(lockReason(en.catId), "error"); return false; }
-    let items = [stripNum(raw)];
-    const sp = splitNumbered(raw);
-    if (sp && sp.length > 1) {
-      adding = true;
-      const v = await choiceDialog("偵測到多點意見", `<p style="margin:0 0 6px">您輸入的內容含有 ${sp.length} 個編號項目，要分成 ${sp.length} 則意見分別儲存嗎？</p><blockquote>${sp.map((x, i) => `${i + 1}. ${esc(x)}`).join("\n")}</blockquote>`,
-        [{ label: "返回修改", value: null }, { label: "合併為一則", value: "one" }, { label: `分成 ${sp.length} 則儲存`, kind: "primary", value: "split" }]);
-      adding = false;
-      if (!v) { cin.focus(); return false; }
-      if (v === "split") items = sp;
-    }
     if (items.some(t => t.length > 2000)) { toast("單則意見請勿超過 2000 字", "error"); return false; }
-    cin.value = ""; ls.del(draftKey(entryId)); renderDraft();
+    cin.value = ""; ls.del(draftKey(entryId));
     persist(items);
+    renumber(cin, nextNo()); if (document.activeElement === cin) cin.setSelectionRange(cin.value.length, cin.value.length); renderDraft();
     return true;
   }
   /** 儲存一則或多則意見（含操作紀錄） */
@@ -2041,7 +2088,7 @@ Views.entry = (el, { entryId }) => {
       W(B.batch([{ op: "set", c: "comments", id, d }, auditOp("comment.add", { catId: en.catId, entryId, to: t })])).then(() => { S.pendingIds.delete(id); if (i === items.length - 1) toast(items.length > 1 ? `已儲存 ${items.length} 則意見（第 ${start + 1}～${no} 則）` : `第 ${no} 則意見已儲存`, "ok"); scheduleUpdate(); })
         .catch(() => {
           S.pendingIds.delete(id); S.comments = S.comments.filter(c => c.id !== id);
-          const c2 = $("#cin", el); if (c2) { c2.value = (c2.value ? c2.value + "\n" : "") + t; ls.set(draftKey(entryId), c2.value); renderDraft(); }
+          const c2 = $("#cin", el); if (c2) { appendItem(t); ls.set(draftKey(entryId), c2.value); renderDraft(); }
           scheduleUpdate();
         });
     });
@@ -2101,7 +2148,7 @@ Views.entry = (el, { entryId }) => {
     if (editing && !force) return;
     const en = e(), edit = canEdit(en.catId), l = commentsOf(entryId);
     $("#cmCount", el).textContent = l.length;
-    $("#cinLabel", el).textContent = `新增第 ${l.length + 1} 則意見`;
+    { const c0 = $("#cin", el); if (c0 && !(document.activeElement === c0 && c0.dataset.ime)) renumber(c0, l.length + 1); }
     const html = l.map((c, i) => {
       const pend = S.pendingIds.has(c.id);
       if (editing === c.id) return `<li class="citem" data-id="${c.id}"><span class="no">${i + 1}</span>
@@ -2123,10 +2170,10 @@ Views.entry = (el, { entryId }) => {
   }
   function renderDraft() {
     const cin = $("#cin", el), h = $("#draftHint", el); if (!cin || !h) return;
-    const has = !!cin.value.trim();
+    const n = parseItems(cin.value).length, has = n > 0;
     h.className = "sstate " + (has ? "warn" : "");
-    h.innerHTML = has ? `${I("alert", "sm")}尚未儲存` : "";
-    $("#saveB", el).disabled = !has || !canEdit(e().catId);
+    h.innerHTML = has ? `${I("alert", "sm")}${n} 則尚未儲存` : "";
+    const sb = $("#saveB", el); sb.disabled = !has || !canEdit(e().catId); sb.innerHTML = `${I("check")}${n > 1 ? `儲存 ${n} 則意見` : "儲存意見"}`;
   }
   /* ---- 更新 ---- */
   function update() {
@@ -2160,9 +2207,9 @@ Views.entry = (el, { entryId }) => {
   }
   return {
     update,
-    dirty: () => !!$("#cin", el)?.value.trim() || !!editing,
+    dirty: () => parseItems($("#cin", el)?.value).length > 0 || !!editing,
     canLeave() {
-      const cin = $("#cin", el), t = cin?.value.trim(), en = e();
+      const cin = $("#cin", el), t = parseItems(cin?.value).length ? cin.value.trim() : "", en = e();
       if ((!t && !editing) || !en || !canEdit(en.catId)) return true;
       return new Promise(res => {
         let done = false; const fin = v => { if (!done) { done = true; res(v); } };
@@ -2258,8 +2305,61 @@ function renderBoldSignature(strokes) {
 /** 簽名卡片內容（委員本人或管理者代為收簽） */
 function sigCardHTML(sig, forAdmin) {
   return sig
-    ? `<img class="sigimg" src="${sig}" alt="已儲存的簽名"><div class="row"><button class="btn sm" data-sig="redo">${I("sign", "sm")}重新簽名</button><button class="btn sm danger" data-sig="del">${I("trash", "sm")}刪除簽名</button></div>`
-    : `<button class="btn primary block lg" data-sig="redo">${I("sign")}${forAdmin ? "請委員在此裝置簽名" : "開始簽名"}</button>`;
+    ? `<img class="sigimg" src="${sig}" alt="已儲存的簽名"><div class="row"><button class="btn sm" data-sig="redo">${I("sign", "sm")}重新簽名</button><button class="btn sm" data-sig="up">${I("up", "sm")}改上傳簽名檔</button><button class="btn sm danger" data-sig="del">${I("trash", "sm")}刪除簽名</button></div>`
+    : `<button class="btn primary block lg" data-sig="redo">${I("sign")}${forAdmin ? "請委員在此裝置簽名" : "開始簽名"}</button>
+       <button class="btn block" data-sig="up" style="margin-top:8px">${I("up")}上傳簽名檔（圖片）</button>
+       <p class="small muted" style="margin:8px 0 0">可上傳事先簽好的圖片（白紙深色筆跡的照片或掃描檔），系統會自動去除白底。</p>`;
+}
+/** 簽名圖片處理：去除紙張底色（變透明）、裁掉四周空白、縮到適合放進評分表的大小；回傳 PNG dataURL */
+async function cleanSignature(file) {
+  if (!/^image\//.test(file.type)) throw new Error("請選擇圖片檔（PNG 或 JPG）");
+  const src = URL.createObjectURL(file);
+  try {
+    const img = await new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = () => rej(new Error("無法讀取這張圖片")); im.src = src; });
+    const k = Math.min(1, 1600 / Math.max(img.width, img.height)), w = Math.max(1, Math.round(img.width * k)), h = Math.max(1, Math.round(img.height * k));
+    const cv = document.createElement("canvas"); cv.width = w; cv.height = h; const cx = cv.getContext("2d", { willReadFrequently: true });
+    cx.fillStyle = "#fff"; cx.fillRect(0, 0, w, h); cx.drawImage(img, 0, 0, w, h);
+    const id = cx.getImageData(0, 0, w, h), px = id.data, hist = new Uint32Array(256);
+    for (let i = 0; i < px.length; i += 4) hist[Math.round(.299 * px[i] + .587 * px[i + 1] + .114 * px[i + 2])]++;
+    let bg = 255; { let acc = 0; const need = w * h * .25; for (let v = 255; v >= 0; v--) { acc += hist[v]; if (acc >= need) { bg = v; break; } } }   // 紙張底色：最亮的 25% 像素
+    const hi = Math.max(60, bg - 28), lo = Math.max(20, bg - 120);
+    let x0 = w, y0 = h, x1 = -1, y1 = -1;
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const i = (y * w + x) * 4, lum = .299 * px[i] + .587 * px[i + 1] + .114 * px[i + 2];
+      const a = lum >= hi ? 0 : lum <= lo ? 255 : Math.round((hi - lum) / (hi - lo) * 255);
+      const d = Math.min(1, lo / Math.max(1, lum));   // 筆跡加深
+      px[i] *= d; px[i + 1] *= d; px[i + 2] *= d; px[i + 3] = a;
+      if (a > 90) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+    }
+    if (x1 < 0 || (x1 - x0) < 8 || (y1 - y0) < 4) throw new Error("圖片中找不到簽名筆跡，請使用白紙、深色筆跡的圖片");
+    cx.putImageData(id, 0, 0);
+    const pad = 8; x0 = Math.max(0, x0 - pad); y0 = Math.max(0, y0 - pad); x1 = Math.min(w - 1, x1 + pad); y1 = Math.min(h - 1, y1 + pad);
+    const cw = x1 - x0 + 1, ch = y1 - y0 + 1; let z = Math.min(1, 900 / cw, 320 / ch), url = "";
+    for (let t = 0; t < 6; t++) {
+      const o = document.createElement("canvas"); o.width = Math.max(1, Math.round(cw * z)); o.height = Math.max(1, Math.round(ch * z));
+      o.getContext("2d").drawImage(cv, x0, y0, cw, ch, 0, 0, o.width, o.height); url = o.toDataURL("image/png");
+      if (url.length < 380000) return url; z *= .75;
+    }
+    throw new Error("簽名圖片太大，請裁切後再上傳");
+  } finally { URL.revokeObjectURL(src); }
+}
+/** 上傳簽名檔：選圖 → 自動去背裁切 → 預覽確認。回傳 dataURL；取消回傳 null */
+function pickSignatureFile(who = "") {
+  return new Promise(res => {
+    let done = false; const fin = v => { if (!done) { done = true; res(v); } };
+    const inp = document.createElement("input"); inp.type = "file"; inp.accept = "image/png,image/jpeg,image/webp,image/*";
+    inp.addEventListener("cancel", () => fin(null));
+    inp.onchange = async () => {
+      const f = inp.files[0]; if (!f) return fin(null);
+      const stop = busy("正在處理簽名圖片…"); let url;
+      try { url = await cleanSignature(f); } catch (x) { stop(); toast(x.message || "圖片處理失敗", "error"); return fin(null); }
+      stop();
+      openModal({ title: `${who ? who + "・" : ""}確認簽名檔`, dismissable: false,
+        body: `<p style="margin:0 0 10px">已自動去除底色並裁掉空白，放進評分表時會是下面的樣子：</p><div class="sig-prev"><img src="${url}" alt="簽名預覽"></div><p class="small muted" style="margin:10px 0 0">若筆跡不清楚，請改用白紙、深色筆重新拍照或掃描後再上傳。</p>`,
+        actions: [{ label: "取消", onClick: () => fin(null) }, { label: "使用這個簽名", kind: "primary", onClick: () => fin(url) }] });
+    };
+    inp.click();
+  });
 }
 
 /* =====================================================================
@@ -2476,7 +2576,9 @@ function dataUrlToBytes(u) { const b = atob(u.split(",")[1]); const a = new Uint
 /* ---------- PDF / 列印 ---------- */
 async function makePdfBlob(html, land) {
   const holder = document.createElement("div"); holder.className = "pdf-holder";
-  holder.innerHTML = `<style>${SHEET_CSS}</style>` + html;
+  /* 表格與版面同寬時，最右側 1px 框線會因像素取整被裁掉；PDF 版左右各內縮 0.7mm，讓外框完整落在版面內 */
+  holder.innerHTML = `<style>${SHEET_CSS}.sheet.pdf-pad{padding-left:1mm;padding-right:1mm}</style>` + html;
+  holder.querySelector(".sheet")?.classList.add("pdf-pad");   // 類別加在表單本身：html2pdf 會把它複製到別的容器再轉圖
   document.body.appendChild(holder);
   try {
     await loadScript(LIB.html2pdf); await document.fonts?.ready;
@@ -2635,13 +2737,14 @@ Views.export = (el, { catId, judgeUid }) => {
       const k = ev.target.closest("[data-sig]")?.dataset.sig; if (!k) return;
       const target = isAdmin ? judgeUid : S.user.uid, who = (isAdmin ? S.judges.find(j => j.id === judgeUid) : S.me)?.name || "";
       if (k === "del") { if (!await confirmDialog("確定刪除已儲存的電子簽名？", { ok: "刪除", danger: true })) return; return saveSig(target, null); }
+      if (k === "up") { const u2 = await pickSignatureFile(isAdmin ? who : ""); if (u2) saveSig(target, u2, true); return; }
       const url = await signaturePad({ title: isAdmin ? `${who}・電子簽名` : "電子簽名", who });
       if (url) saveSig(target, url);
     });
     addEventListener("resize", fit);
   }
-  async function saveSig(uid, url) {
-    try { await W(B.batch([{ op: "update", c: "judges", id: uid, d: { signature: url } }, auditOp("signature", { targetUid: uid, targetName: (isAdmin ? S.judges.find(j => j.id === uid) : S.me)?.name, detail: url ? (isAdmin ? "管理者代為收取簽名" : "儲存簽名") : "刪除簽名" })]), url ? "簽名已儲存（輸出時已自動加粗）" : "簽名已刪除");
+  async function saveSig(uid, url, up) {
+    try { await W(B.batch([{ op: "update", c: "judges", id: uid, d: { signature: url } }, auditOp("signature", { targetUid: uid, targetName: (isAdmin ? S.judges.find(j => j.id === uid) : S.me)?.name, detail: url ? (up ? (isAdmin ? "管理者代為上傳簽名檔" : "上傳簽名檔") : isAdmin ? "管理者代為收取簽名" : "儲存簽名") : "刪除簽名" })]), url ? (up ? "簽名檔已儲存" : "簽名已儲存（輸出時已自動加粗）") : "簽名已刪除");
       if (!isAdmin) S.me.signature = url; else { const j = S.judges.find(x => x.id === uid); if (j) j.signature = url; }
       renderPaper(); } catch {}
   }
@@ -3696,6 +3799,14 @@ AdminTabs.judges = pane => {
   pane.addEventListener("click", async e => {
     const a = e.target.closest("[data-act]"); if (!a) return;
     const id = a.closest("[data-jid]")?.dataset.jid, j = S.judges.find(x => x.id === id);
+    if (a.dataset.act === "sigup" || a.dataset.act === "sigdel") {
+      if (!j) return;
+      let url = null;
+      if (a.dataset.act === "sigup") { url = await pickSignatureFile(j.name); if (!url) return; }
+      else if (!await confirmDialog(`確定刪除 ${j.name} 的電子簽名？`, { ok: "刪除", danger: true })) return;
+      W(B.batch([{ op: "update", c: "judges", id, d: { signature: url } }, auditOp("signature", { targetUid: id, targetName: j.name, detail: url ? "管理者代為上傳簽名檔" : "刪除簽名" })]), url ? `${j.name} 的簽名檔已儲存` : "簽名已刪除").catch(() => {});
+      return;
+    }
     if (a.dataset.act === "toggle") { W(B.batch([{ op: "update", c: "judges", id, d: { enabled: !j.enabled } }, auditOp("judge.toggle", { targetUid: id, targetName: j.name, from: j.enabled ? "啟用" : "停用", to: j.enabled ? "停用" : "啟用" })]), j.enabled ? "已停用" : "已啟用").catch(() => {}); }
     if (a.dataset.act === "edit") editModal(j);
     if (a.dataset.act === "unlock") {
@@ -3766,9 +3877,10 @@ AdminTabs.judges = pane => {
   return { update() {
     if (!ready("judges", "cats", "admins")) { $("#jt", pane).innerHTML = '<div class="skeleton"></div>'; return; }
     const js = sortBy(S.judges, "createdAt");
-    $("#jt", pane).innerHTML = js.length ? `<table class="tbl"><thead><tr><th>姓名</th><th>帳號</th><th>可評類別／送出狀態</th><th>狀態</th><th class="num">操作</th></tr></thead><tbody>
+    $("#jt", pane).innerHTML = js.length ? `<table class="tbl"><thead><tr><th>姓名</th><th>帳號</th><th>可評類別／送出狀態</th><th>電子簽名</th><th>狀態</th><th class="num">操作</th></tr></thead><tbody>
       ${js.map(j => `<tr data-jid="${j.id}"><td><b>${esc(j.name)}</b></td><td>${esc(j.username)}</td>
         <td><div class="mini-prog">${judgeCats(j).map(c => { const sub = isSubmitted(c.id, j.id); return sub ? `<button class="badge ok" data-act="unlock" data-cat="${c.id}" title="已送出，點擊解鎖" style="cursor:pointer">${I("lock", "sm")}${esc(c.name)}・解鎖</button>` : `<span class="badge">${esc(c.name)}${isScorer(c.id, j.id) ? "" : "・只寫意見"}</span>`; }).join("")}</div></td>
+        <td class="sig-cell">${j.signature ? `<img class="sig-th" src="${j.signature}" alt="${esc(j.name)} 的簽名"><button class="btn ghost sm" data-act="sigup" title="更換簽名檔">更換</button><button class="btn ghost sm" data-act="sigdel" style="color:var(--danger)" title="刪除簽名">刪除</button>` : `<button class="btn sm" data-act="sigup">${I("up", "sm")}上傳簽名檔</button>`}</td>
         <td><label class="switch" title="${j.enabled ? "啟用中" : "已停用"}"><input type="checkbox" data-act="toggle" ${j.enabled ? "checked" : ""} aria-label="啟用 ${esc(j.name)}"><span class="track"></span></label></td>
         <td class="num" style="white-space:nowrap"><button class="btn ghost sm" data-act="edit">${I("edit", "sm")}編輯</button><button class="btn ghost sm" data-act="del" style="color:var(--danger)">${I("trash", "sm")}移除</button></td></tr>`).join("")}</tbody></table>`
       : `<div class="empty">尚未建立委員帳號</div>`;
