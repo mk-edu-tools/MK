@@ -2580,15 +2580,19 @@ async function makePdfBlob(html, land) {
   holder.innerHTML = `<style>${SHEET_CSS}.sheet.pdf-pad{padding-left:1mm;padding-right:1mm}</style>` + html;
   holder.querySelector(".sheet")?.classList.add("pdf-pad");   // 類別加在表單本身：html2pdf 會把它複製到別的容器再轉圖
   document.body.appendChild(holder);
+  /* 頁面有直向捲軸時（Windows 捲軸約 17px），轉圖內容會被往右推半個捲軸寬，最右側框線因此被裁掉。
+     轉檔期間暫時隱藏捲軸，並明確指定以「不含捲軸」的寬度轉圖；結束後還原。 */
+  const root = document.documentElement, prevOv = root.style.overflow, sx = scrollX, sy = scrollY;
+  root.style.overflow = "hidden";
   try {
     await loadScript(LIB.html2pdf); await document.fonts?.ready;
     return await window.html2pdf().set({
       margin: [12.7, 12.7, 12.7, 12.7],
-      image: { type: "jpeg", quality: 0.97 }, html2canvas: { scale: 2.2, backgroundColor: "#ffffff", useCORS: true, scrollX: 0, scrollY: 0 },
+      image: { type: "jpeg", quality: 0.97 }, html2canvas: { scale: 2.2, backgroundColor: "#ffffff", useCORS: true, scrollX: 0, scrollY: 0, windowWidth: root.clientWidth },
       jsPDF: { unit: "mm", format: "a4", orientation: land ? "landscape" : "portrait" },
       pagebreak: { mode: ["css", "legacy"], avoid: ["tr", ".s-sign", ".s-signs"] }
     }).from(holder.querySelector(".sheet")).outputPdf("blob");
-  } finally { holder.remove(); }
+  } finally { holder.remove(); root.style.overflow = prevOv; scrollTo(sx, sy); }
 }
 async function savePdf(html, filename, land) {
   const done = busy("正在產生 PDF 檔…");
