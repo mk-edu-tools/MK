@@ -984,6 +984,16 @@ details.tie summary::-webkit-details-marker{display:none}
 .md{display:inline-flex;align-items:center;gap:6px;font-size:calc(13.5px*var(--fz,1));color:var(--muted)}
 .md.multi{color:var(--ink);font-weight:500}
 .anon-seg{display:flex}.anon-seg button{flex:1}
+
+/* ---------- 6 等第以上：按鈕只放數字，分段說明標在上方 ---------- */
+.scale-bands{display:grid;gap:6px;margin-bottom:6px}
+.sbd{text-align:center;font-size:calc(12.5px*var(--fz,1));font-weight:500;color:var(--muted);padding:3px 4px 5px;border-bottom:3px solid var(--line-strong);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sbd.b5{border-color:var(--s5)}.sbd.b4{border-color:var(--s4)}.sbd.b3{border-color:var(--s3)}.sbd.b2{border-color:var(--s2)}.sbd.b1{border-color:var(--s1)}
+.scale.many .sbtn{min-height:58px}
+.scale.many .sbtn .l,.scale.nolabel .sbtn .l{display:none}
+.scale.nolabel .sbtn{min-height:64px}
+@media (max-width:720px){.scale-bands{display:none}.scale.many:not(.nolabel) .sbtn .l{display:block}.scale.many .sbtn{min-height:66px}}
+.sc-lb .pill{min-width:64px;white-space:nowrap}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 @media print{.no-print{display:none!important}}
 </style>
@@ -1056,11 +1066,17 @@ const scaleMax = () => { const n = Math.round(+S.cfg?.scaleMax || 5); return n >
 const scaleList = (n = scaleMax()) => Array.from({ length: n }, (_, i) => n - i);
 /** 分數 → 五級別（1～5）：用於顏色與參考評語等級 */
 const sb = (v, n = scaleMax()) => v ? Math.min(5, Math.max(1, Math.ceil(v * 5 / n))) : 0;
-const scaleLabel = (v, n = scaleMax()) => { const c = n === scaleMax() ? S.cfg?.scaleLabels?.[v - 1] : ""; return (c && String(c).trim()) || bandLabel(sb(v, n)); };
+/** 分段名稱（第 1～5 段，可在評選設定自訂）；設定「只用數字」時一律不顯示 */
+const scaleNoLabel = () => S.cfg?.scaleNoLabel === true;
+const bandName = b => { const c = S.cfg?.scaleBands?.[b - 1]; return (c && String(c).trim()) || bandLabel(b); };
+const scaleLabel = (v, n = scaleMax()) => scaleNoLabel() || !v ? "" : bandName(sb(v, n));
+const scaleDot = v => { const l = scaleLabel(v); return l ? "・" + l : ""; };
+/** 評分按鈕要不要重畫：等第數或分段說明有變就重畫 */
+const scaleSig = () => [scaleMax(), scaleNoLabel() ? 1 : 0, ...[1, 2, 3, 4, 5].map(bandName)].join("|");
 const NUM_ZH = { 5: "五", 6: "六", 7: "七", 8: "八", 9: "九", 10: "十" };
 /** 評分說明：相同名稱的連續分數合併，例如「10～9分代表優良出眾；…」 */
 function scaleGroups() { const g = []; scaleList().forEach(v => { const l = scaleLabel(v), last = g.at(-1); if (last && last.label === l) last.lo = v; else g.push({ hi: v, lo: v, label: l }); }); return g; }
-const scaleNote = bold => scaleGroups().map(g => { const t = g.hi === g.lo ? String(g.hi) : `${g.hi}～${g.lo}`; return `${bold ? `<b>${t}</b>` : t}分代表${bold ? esc(g.label) : g.label}`; }).join("；") + "。";
+const scaleNote = bold => scaleNoLabel() ? "" : scaleGroups().map(g => { const t = g.hi === g.lo ? String(g.hi) : `${g.hi}～${g.lo}`; return `${bold ? `<b>${t}</b>` : t}分代表${bold ? esc(g.label) : g.label}`; }).join("；") + "。";
 /** 個別評分表欄寬（twips）：等第越多，分數欄越窄 */
 function sheetCols(dbl, ws) {
   if (!ws) return { W: COLW_NS[dbl ? "double" : "single"], cw: 0, n: 0 };
@@ -1958,8 +1974,9 @@ Views.entry = (el, { entryId }) => {
           <section class="card wcard" aria-labelledby="h-score" ${isScorer(cat.id) ? "" : "hidden"}>
             <div class="card-h"><h2 id="h-score">評分</h2><span class="sstate" id="scoreState" aria-live="polite"></span>
               <span class="spacer"></span><span class="small muted kbd-hint">鍵盤 <span class="kbd">1</span>～<span class="kbd">${scaleMax() === 10 ? "0" : scaleMax()}</span>${scaleMax() === 10 ? "（0＝10 分）" : ""}</span><button class="btn ghost sm" id="clrScore">清除</button></div>
-            <div class="scale ${scaleMax() > 5 ? "many" : ""}" role="radiogroup" aria-labelledby="h-score" id="scale" data-n="${scaleMax()}" style="grid-template-columns:repeat(${scaleMax()},1fr)">
-              ${scaleList().map(v => `<button class="sbtn" role="radio" data-v="${v}" data-b="${sb(v)}" aria-checked="false"><span class="n">${v}</span><span class="l">${esc(scaleLabel(v))}</span></button>`).join("")}
+            ${scaleMax() > 5 && !scaleNoLabel() ? `<div class="scale-bands" aria-hidden="true" style="grid-template-columns:repeat(${scaleMax()},1fr)">${scaleGroups().map(g => `<span class="sbd b${sb(g.hi)}" style="grid-column:span ${g.hi - g.lo + 1}">${g.hi === g.lo ? g.hi : `${g.hi}–${g.lo}`}　${esc(g.label)}</span>`).join("")}</div>` : ""}
+            <div class="scale ${scaleMax() > 5 ? "many" : ""} ${scaleNoLabel() ? "nolabel" : ""}" role="radiogroup" aria-labelledby="h-score" id="scale" data-n="${esc(scaleSig())}" style="grid-template-columns:repeat(${scaleMax()},1fr)">
+              ${scaleList().map(v => `<button class="sbtn" role="radio" data-v="${v}" data-b="${sb(v)}" aria-checked="false" aria-label="${v} 分${scaleDot(v)}"><span class="n">${v}</span><span class="l">${esc(scaleLabel(v))}</span></button>`).join("")}
             </div>
             <div id="tieBox"></div>
           </section>
@@ -2286,7 +2303,7 @@ Views.entry = (el, { entryId }) => {
     if (!ready("cats", "entries", "cfg")) { if (!mounted) el.innerHTML = topbarHTML() + `<main class="wrap narrow"><div class="skeleton" style="height:60px;margin-bottom:16px"></div><div class="skeleton" style="height:180px"></div></main>`; return; }
     const en = e();
     if (!en) { el.innerHTML = topbarHTML() + `<main class="wrap narrow"><div class="empty">找不到此參賽隊伍（可能已被管理者刪除）。<br><br><button class="btn" data-nav="#/">返回列表</button></div></main>`; mounted = false; return; }
-    if (!mounted || !$("#scale", el) || $("#scale", el).dataset.n !== String(scaleMax())) mount();
+    if (!mounted || !$("#scale", el) || $("#scale", el).dataset.n !== scaleSig()) mount();
     if (!$("#scale", el)) return;
     const l = siblings(), i = l.findIndex(x => x.id === entryId), last = i >= l.length - 1;
     $("#pos", el).textContent = $("#pos3", el).textContent = `${i + 1} / ${l.length}`;
@@ -2513,7 +2530,7 @@ function sheetHTML(d, sig, signs) {
   return `<div class="sheet">
     <p class="s-title">【${esc(d.cat.name)}】</p>
     ${ws ? `<p>※ 請評審委員參酌審查指標，依照送審文件內容給予${nS}~1分之評分：</p>
-    <p>※ ${scaleNote(true)}</p>`
+    ${scaleNoLabel() ? "" : `<p>※ ${scaleNote(true)}</p>`}`
     : `<p>※ 請評審委員參酌審查指標，依照送審文件內容填寫審查意見（本類別由指定委員評分）。</p>`}
     <table><colgroup>${W.map(w => `<col style="width:${(w / tot * 100).toFixed(2)}%">`).join("")}</colgroup>
       <thead><tr><th${rs}>編號</th><th${rs}>${esc(d.cat.col1Label || (dbl ? "機關學校" : "學校"))}</th>${dbl ? `<th${rs}>${esc(d.cat.col2Label || "團體名稱")}</th>` : ""}${ws ? `<th colspan="${nS}">評分</th>` : ""}<th${rs}>審查意見</th></tr>
@@ -2566,7 +2583,7 @@ function summaryCols(sd, showScores) {
 }
 const fmtAvg = v => v == null ? "" : v.toFixed(2);
 function summaryHTML(sd, showScores, withSign, anon) {
-  if (anon) { showScores = false; withSign = false; }
+  if (anon) showScores = false;
   const dbl = sd.cat.layout === "double", n = showScores ? sd.sj.length : 0, W = summaryCols(sd, showScores), tot = W.reduce((a, b) => a + b, 0);
   const two = n > 0, rs = two ? ' rowspan="2"' : "", aw = hasAward(sd);
   return `<div class="sheet land">
@@ -2583,7 +2600,7 @@ function summaryHTML(sd, showScores, withSign, anon) {
     </table>
     ${sd.cat.note ? `<p class="s-note">備註：${esc(sd.cat.note)}</p>` : ""}
     <p class="small">※ 平均為${catScorers(sd.cat).length ? "評分委員" : "已評分委員"}之算術平均（取至小數第二位）；${sd.manual ? "名次及等第依評審會議決議。" : "名次依平均由高至低排列，同分同名次；尚未評分者不列名次。"}</p>
-    ${withSign && sd.js.length ? `<div class="s-signs"><p>評審委員簽名：</p><div class="sg-grid">${sd.js.map(j => `<div class="sg"><span>${esc(j.name)}</span><span class="sg-box">${j.signature ? `<img src="${j.signature}" alt="">` : ""}</span></div>`).join("")}</div></div>` : ""}
+    ${withSign && sd.js.length ? `<div class="s-signs"><p>評審委員簽名：</p><div class="sg-grid">${sd.js.map(j => `<div class="sg">${anon ? "" : `<span>${esc(j.name)}</span>`}<span class="sg-box">${j.signature ? `<img src="${j.signature}" alt="">` : ""}</span></div>`).join("")}</div></div>` : ""}
   </div>`;
 }
 const summaryFileName = (sd, ext, anon) => safeName(`${yearTag()}閱讀評選_${sd.cat.name}_評分總表${anon ? "_匿名版" : ""}`) + "." + ext;
@@ -2621,7 +2638,7 @@ async function judgeDocx(d, sig, signs) {
     sections: [{ properties: { page: { size: { width: 11906, height: 16838 }, margin: { top: 720, right: 720, bottom: 720, left: 720 } } }, children: [
       para(run(`【${d.cat.name}】`), C),
       ...(ws ? [para(run(`※ 請評審委員參酌審查指標，依照送審文件內容給予${nS}~1分之評分：`)),
-      para([run("※ "), ...scaleGroups().flatMap((g, i, a) => [B5(g.hi === g.lo ? String(g.hi) : `${g.hi}～${g.lo}`), run(`分代表${g.label}${i === a.length - 1 ? "。" : "；"}`)])])]
+      ...(scaleNoLabel() ? [] : [para([run("※ "), ...scaleGroups().flatMap((g, i, a) => [B5(g.hi === g.lo ? String(g.hi) : `${g.hi}～${g.lo}`), run(`分代表${g.label}${i === a.length - 1 ? "。" : "；"}`)])])])]
       : [para(run("※ 請評審委員參酌審查指標，依照送審文件內容填寫審查意見（本類別由指定委員評分）。"))]),
       new D.Table({ rows, width: { size: W.reduce((a, b) => a + b, 0), type: D.WidthType.DXA }, columnWidths: W, layout: D.TableLayoutType.FIXED }),
       ...(d.cat.note ? [para(run(`備註：${d.cat.note}`), { spacing: { before: 120 } })] : []),
@@ -2631,7 +2648,7 @@ async function judgeDocx(d, sig, signs) {
   });
 }
 async function summaryDocx(sd, showScores, withSign, anon) {
-  if (anon) { showScores = false; withSign = false; }
+  if (anon) showScores = false;
   const k = docxKit(), { D, run, para, C, cell } = k, SZ = 22, r = (t, o = {}) => run(t, { size: SZ, ...o });
   const dbl = sd.cat.layout === "double", n = showScores ? sd.sj.length : 0, W = summaryCols(sd, showScores), two = n > 0, aw = hasAward(sd);
   const rsp = two ? { rowSpan: 2 } : {};
@@ -2659,18 +2676,18 @@ async function summaryDocx(sd, showScores, withSign, anon) {
       new D.Table({ rows, width: { size: W.reduce((a, b) => a + b, 0), type: D.WidthType.DXA }, columnWidths: W, layout: D.TableLayoutType.FIXED }),
       ...(sd.cat.note ? [para(r(`備註：${sd.cat.note}`), { spacing: { before: 120 } })] : []),
       para(r(`※ 平均為${catScorers(sd.cat).length ? "評分委員" : "已評分委員"}之算術平均（取至小數第二位）；${sd.manual ? "名次及等第依評審會議決議。" : "名次依平均由高至低排列，同分同名次；尚未評分者不列名次。"}`, { size: 20 })),
-      ...(withSign && sd.js.length ? await summarySignDocx(k, sd) : [])
+      ...(withSign && sd.js.length ? await summarySignDocx(k, sd, 15398, anon) : [])
     ] }]
   });
 }
-async function summarySignDocx(k, sd, total = 15398) {
+async function summarySignDocx(k, sd, total = 15398, noName = false) {
   const { D, run, para } = k, NB = { style: D.BorderStyle.NONE, size: 0, color: "FFFFFF" }, borders = { top: NB, bottom: NB, left: NB, right: NB };
   const per = total > 12000 ? 3 : 2, cw = Math.floor(total / per), rows = [];
   for (let i = 0; i < sd.js.length; i += per) {
     const cells = [];
     for (let j = 0; j < per; j++) {
       const p = sd.js[i + j];
-      const kids = p ? [run(`${p.name}：`, { size: 22 }), ...(p.signature ? [new D.ImageRun({ data: dataUrlToBytes(p.signature), transformation: await sigDims(p.signature, 48, 170) })] : [run("＿＿＿＿＿＿＿＿＿", { size: 22 })])] : [run("")];
+      const kids = p ? [...(noName ? [] : [run(`${p.name}：`, { size: 22 })]), ...(p.signature ? [new D.ImageRun({ data: dataUrlToBytes(p.signature), transformation: await sigDims(p.signature, 48, 170) })] : [run("＿＿＿＿＿＿＿＿＿", { size: 22 })])] : [run("")];
       cells.push(new D.TableCell({ children: [para(kids)], width: { size: cw, type: D.WidthType.DXA }, borders, verticalAlign: D.VerticalAlign.BOTTOM, margins: { top: 160, bottom: 60 } }));
     }
     rows.push(new D.TableRow({ cantSplit: true, children: cells }));
@@ -2723,7 +2740,7 @@ function zipModal(defaultCat) {
       <label class="check"><input type="checkbox" id="zW" checked>各委員評分表（Word）</label>
       <label class="check"><input type="checkbox" id="zP">各委員評分表（PDF，檔案較多時需時較久）</label>
       <label class="check"><input type="checkbox" id="zS" checked>評分總表（Word＋PDF＋CSV）及評定結果</label>
-      <label class="check"><input type="checkbox" id="zA">另附匿名版評分總表（Word＋PDF，不含委員姓名與個別分數，送教育局用）</label>
+      <label class="check"><input type="checkbox" id="zA">另附匿名版評分總表（Word＋PDF，不含委員姓名與個別分數；簽名欄只放簽名，送教育局用）</label>
       <label class="check"><input type="checkbox" id="zG" checked>放入已儲存的電子簽名</label></fieldset>
     <p class="small muted" id="zEst" style="margin:0"></p>`,
     onMount: ov => {
@@ -2757,8 +2774,8 @@ async function exportAllZip({ catIds, word, pdf, summary, sign, anon }) {
         if (pdf) jobs.push([`${fn}.pdf`, async () => { const { d, sig } = get(); return makePdfBlob(sheetHTML(d, sig), false); }]);
       });
       if (anon) {
-        jobs.push([`${dir}/00_評分總表_匿名版.docx`, async () => P.toBlob(await summaryDocx(sd, false, false, true))]);
-        jobs.push([`${dir}/00_評分總表_匿名版.pdf`, async () => makePdfBlob(summaryHTML(sd, false, false, true), true)]);
+        jobs.push([`${dir}/00_評分總表_匿名版.docx`, async () => P.toBlob(await summaryDocx(sd, false, sign, true))]);
+        jobs.push([`${dir}/00_評分總表_匿名版.pdf`, async () => makePdfBlob(summaryHTML(sd, false, sign, true), true)]);
       }
       if (summary) {
         jobs.push([`${dir}/00_評分總表.docx`, async () => P.toBlob(await summaryDocx(sd, true, sign))]);
@@ -3011,7 +3028,7 @@ Views.proxy = (el, { catId, judgeUid }) => {
     setHTML($("#pxB", el), catEntries(catId).map(e => {
       const sc = scoreOf(e.id, judgeUid), srec = S.scores.find(s => s.id === `${judgeUid}_${e.id}`), cms = commentsOf(e.id, judgeUid);
       return `<tr data-eid="${e.id}"><td><b>${esc(e.code)}</b></td><td>${esc(e.org)}</td>${dbl ? `<td>${esc(e.name)}</td>` : ""}
-        ${scorer ? `<td class="num"><span class="lvl-pick">${scaleList().map(v => `<button class="lv${sc === v ? " on" : ""}" data-px="lv" data-v="${v}" title="${v} 分・${scaleLabel(v)}">${v}</button>`).join("")}</span>
+        ${scorer ? `<td class="num"><span class="lvl-pick">${scaleList().map(v => `<button class="lv${sc === v ? " on" : ""}" data-px="lv" data-v="${v}" title="${v} 分${scaleDot(v)}">${v}</button>`).join("")}</span>
           ${sc ? `<button class="btn ghost sm" data-px="clr" title="清除評分">${I("x", "sm")}</button>` : ""}${srec?.editedBy ? `<div class="px-flag">${I("edit", "sm")}${esc(srec.editedBy)} 代修・${fmtDT(srec.editedAt)}</div>` : ""}</td>` : ""}
         <td><ol class="px-cm">${cms.map(c => `<li><span>${esc(c.text)}${c.editedBy ? ` <span class="px-flag inline">${I("edit", "sm")}代修</span>` : ""}</span>
           <span class="px-act"><button class="btn ghost icon sm" data-px="edit" data-cid="${c.id}" aria-label="修改">${I("edit", "sm")}</button><button class="btn ghost icon sm" data-px="del" data-cid="${c.id}" aria-label="刪除" style="color:var(--danger)">${I("trash", "sm")}</button></span></li>`).join("")}</ol>
@@ -3139,8 +3156,8 @@ Views.summary = (el, { catId }) => {
             <div class="seg anon-seg" role="group" aria-label="輸出版本" id="anonSeg" style="margin-top:8px"><button data-an="0">完整版</button><button data-an="1">匿名版（送教育局）</button></div>
             <p class="small muted" id="anonHint" style="margin:8px 0 0"></p>
             <div id="fullOpts">
-            <label class="check" style="margin-top:6px"><input type="checkbox" id="showSc" ${showScores ? "checked" : ""}>顯示各委員分數欄</label>
-            <label class="check"><input type="checkbox" id="withSg" ${withSign ? "checked" : ""}>加入評審委員簽名欄</label></div>
+            <label class="check" style="margin-top:6px"><input type="checkbox" id="showSc" ${showScores ? "checked" : ""}>顯示各委員分數欄</label></div>
+            <label class="check"><input type="checkbox" id="withSg" ${withSign ? "checked" : ""}><span id="withSgL">加入評審委員簽名欄</span></label>
             <div style="display:flex;flex-direction:column;gap:10px;margin-top:10px">
               <button class="btn primary lg" id="xDocx">${I("file")}下載 Word（.docx）</button>
               <button class="btn lg" id="xPdf">${I("dl")}下載 PDF</button>
@@ -3163,8 +3180,8 @@ Views.summary = (el, { catId }) => {
   function render() {
     const sd = summaryData(catId); if (!sd) return;
     setHTML($("#paper", el), `<style>${SHEET_CSS}</style>` + summaryHTML(sd, showScores, withSign, anon)); fit();
-    $$("#anonSeg [data-an]", el).forEach(b => b.setAttribute("aria-pressed", (b.dataset.an === "1") === anon)); $("#fullOpts", el).hidden = anon;
-    $("#anonHint", el).textContent = anon ? "不含委員姓名、各委員分數與簽名欄；只保留平均、名次、等第，審查意見綜整為一份（相同的意見只列一次）。" : "含委員姓名與各委員的審查意見，供內部留存。";
+    $$("#anonSeg [data-an]", el).forEach(b => b.setAttribute("aria-pressed", (b.dataset.an === "1") === anon)); $("#fullOpts", el).hidden = anon; $("#withSgL", el).textContent = anon ? "加入評審委員簽名欄（只放簽名，不印姓名）" : "加入評審委員簽名欄";
+    $("#anonHint", el).textContent = anon ? "不含委員姓名與各委員分數；只保留平均、名次、等第，審查意見綜整為一份（相同的意見只列一次）。" : "含委員姓名與各委員的審查意見，供內部留存。";
     setHTML($("#stat", el), sd.js.map(j => { const n = sd.rows.filter(r => doneOf(r.e.id, sd.cat.id, j.id)).length, sub = isSubmitted(sd.cat.id, j.id);
       return `<li><span>${esc(j.name)}</span><span>${n} / ${sd.rows.length} ${sub ? `<span class="badge ok">${I("lock", "sm")}已送出</span>` : `<span class="badge">未送出</span>`}</span></li>`; }).join("") || `<li class="muted">尚無委員</li>`);
   }
@@ -3265,8 +3282,9 @@ AdminTabs.settings = pane => {
         <span class="help">關閉時，即使在開放時間內也無法評分（可用於臨時暫停）</span></div>
       <fieldset class="field fs-box scale-set"><legend class="lbl">評分等第</legend>
         <div class="lk-row"><label class="lk-l" for="scN">等第數</label><select class="input" id="scN" style="width:auto">${[5, 6, 7, 8, 9, 10].map(n => `<option value="${n}">${n} 等第（${n}～1 分）</option>`).join("")}</select><span class="small muted" id="scWarn"></span></div>
-        <div class="lk-row" style="align-items:flex-start"><span class="lk-l" style="padding-top:8px">各分數說明</span><div class="sc-labels" id="scLb"></div></div>
-        <span class="help">等第越多，分數差距越容易拉開，平均同分的情形會減少。各分數的說明會顯示在評分按鈕與評分表的「※ 幾分代表…」；留白則使用預設說明。評分開始後請不要再變更等第數，已經打的分數不會自動換算。</span>
+        <div class="lk-row" style="align-items:flex-start"><span class="lk-l" style="padding-top:8px">分段說明</span><div style="flex:1;min-width:0"><div class="sc-labels" id="scLb"></div>
+          <label class="check" style="margin-top:8px"><input type="checkbox" id="scNo"><span>不顯示分段說明（只用數字評分；評分表也不印「※ 幾分代表…」）</span></label></div></div>
+        <span class="help">等第越多，分數差距越容易拉開，平均同分的情形會減少。分數固定分成五段，每段一個名稱，當作委員共同的評分基準：6 等第以上時，評分按鈕只顯示數字，分段名稱標在按鈕上方；評分表則印成「※ 10～9分代表…」。名稱留白會使用預設值。評分開始後請不要再變更等第數，已經打的分數不會自動換算。</span>
       </fieldset>
       <fieldset class="field fs-box"><legend class="lbl">同分提醒</legend>
         <label class="check"><input type="checkbox" id="tieOn"><span>委員評分時，提醒哪些學校「平均同分、名次並列」</span></label>
@@ -3291,12 +3309,13 @@ AdminTabs.settings = pane => {
   const scNv = () => +$("#scN", pane).value || 5;
   /** 各分數說明的輸入欄：預設值依五級別帶入，可自行修改 */
   function drawScLabels(keep) {
-    const n = scNv(), old = keep ? Object.fromEntries($$("#scLb input", pane).map(i => [i.dataset.v, i.value])) : {}, saved = n === scaleMax() ? (S.cfg?.scaleLabels || []) : [];
-    $("#scLb", pane).innerHTML = scaleList(n).map(v => `<label class="sc-lb"><span class="pill s s${sb(v, n)}">${v}</span><input class="input sm" data-v="${v}" maxlength="12" placeholder="${bandLabel(sb(v, n))}" value="${esc(old[v] ?? saved[v - 1] ?? "")}" aria-label="${v} 分的說明"></label>`).join("");
+    const n = scNv(), old = keep ? Object.fromEntries($$("#scLb input", pane).map(i => [i.dataset.b, i.value])) : {}, saved = S.cfg?.scaleBands || [];
+    const rng = b => { const v = scaleList(n).filter(x => sb(x, n) === b); return v.length > 1 ? `${v[0]}–${v.at(-1)}` : String(v[0] ?? ""); };
+    $("#scLb", pane).innerHTML = [5, 4, 3, 2, 1].map(b => `<label class="sc-lb"><span class="pill s s${b}">${rng(b)} 分</span><input class="input sm" data-b="${b}" maxlength="12" placeholder="${bandLabel(b)}" value="${esc(old[b] ?? saved[b - 1] ?? "")}" aria-label="${rng(b)} 分的分段名稱"></label>`).join("");
     const mx = S.scores.reduce((a, x) => Math.max(a, x.score || 0), 0);
     $("#scWarn", pane).textContent = n !== scaleMax() && S.scores.length ? `目前已有 ${S.scores.length} 筆評分（最高 ${mx} 分），變更後不會自動換算。` : "";
   }
-  $("#scN", pane).onchange = () => drawScLabels(false);
+  $("#scN", pane).onchange = () => drawScLabels(true);
   let logoVal = "";
   const thVal = () => $("input[name=th]:checked", pane)?.value || "teal";
   const preview = () => { S.lookPreview = true; applyTheme(thVal(), logoVal); const pv = $("#lgPrev", pane); pv.innerHTML = logoHTML(logoVal); pv.classList.toggle("has-img", !!logoVal); $("#lgRm", pane).hidden = !logoVal; };
@@ -3321,7 +3340,7 @@ AdminTabs.settings = pane => {
     if (ca <= oa) return toast("截止時間必須晚於開放時間", "error");
     const base = { ...(S.cfg || {}) }; delete base.id;
     const d = { ...base, title: $("#t1", pane).value.trim() || DEFAULT_TITLE, shortTitle: $("#t3", pane).value.trim(), subtitle: $("#t2", pane).value.trim(), openAt: oa, closeAt: ca,
-      isOpen: $("#io", pane).checked, peerView: $("input[name=pv]:checked", pane)?.value || "off", theme: thVal(), logo: logoVal, scaleMax: scNv(), scaleLabels: scaleList(scNv()).reverse().map(v => ($(`#scLb input[data-v="${v}"]`, pane)?.value || "").trim()), tieHint: $("#tieOn", pane).checked, updatedAt: Date.now() };
+      isOpen: $("#io", pane).checked, peerView: $("input[name=pv]:checked", pane)?.value || "off", theme: thVal(), logo: logoVal, scaleMax: scNv(), scaleLabels: [], scaleBands: [1, 2, 3, 4, 5].map(b => ($(`#scLb input[data-b="${b}"]`, pane)?.value || "").trim()), scaleNoLabel: $("#scNo", pane).checked, tieHint: $("#tieOn", pane).checked, updatedAt: Date.now() };
     { const mx = S.scores.reduce((a, x) => Math.max(a, x.score || 0), 0), oldN = scaleMax();
       if (d.scaleMax < mx) return toast(`目前已有 ${mx} 分的評分，等第數不能低於 ${mx}`, "error");
       if (d.scaleMax !== oldN && S.scores.length && !await confirmDialog(`目前已有 ${S.scores.length} 筆評分。\n將等第數由 ${oldN} 改為 ${d.scaleMax} 後，已經打的分數不會自動換算（例如原本的 4 分仍是 4 分）。\n\n確定要變更嗎？`, { title: "變更評分等第", ok: "確定變更", danger: true })) return; }
@@ -3342,7 +3361,7 @@ AdminTabs.settings = pane => {
     $("#io", pane).checked = !!c.isOpen; $("#ioL", pane).textContent = c.isOpen ? "開啟" : "關閉";
     $(`input[name=pv][value="${peerMode()}"]`, pane).checked = true;
     $(`input[name=th][value="${THEMES[c.theme] ? c.theme : "teal"}"]`, pane).checked = true; logoVal = c.logo || "";
-    $("#scN", pane).value = String(scaleMax()); drawScLabels(false); $("#tieOn", pane).checked = c.tieHint !== false;
+    $("#scN", pane).value = String(scaleMax()); drawScLabels(false); $("#scNo", pane).checked = scaleNoLabel(); $("#tieOn", pane).checked = c.tieHint !== false;
     { const pv = $("#lgPrev", pane); pv.innerHTML = logoHTML(logoVal); pv.classList.toggle("has-img", !!logoVal); $("#lgRm", pane).hidden = !logoVal; }
     $("#upd", pane).textContent = c.updatedAt ? "上次更新：" + fmtDT(c.updatedAt) : "";
   }, unmount() { S.lookPreview = null; syncLook(); } };
@@ -4132,12 +4151,12 @@ AdminTabs.results = pane => {
     const tn = st.reduce((a, x) => a + x.n, 0), gm = tn ? st.reduce((a, x) => a + (x.m || 0) * x.n, 0) / tn : null, span = 3 + (dbl ? 1 : 0);
     setHTML(rv, `<div class="card-h"><div><h2>委員 × ${esc(sd.cat.col1Label || "學校")}熱度圖</h2><p class="sub" style="margin:2px 0 0">顏色越深分數越高。同一列顏色落差大，代表委員看法不同；差距 ≥ 2 分時，以粗框標出該列的最高分與最低分。</p></div>
       <div class="row"><div class="seg" role="group" aria-label="排序">${[["rank", "依名次"], ["code", "依編號"]].map(([k, l]) => `<button data-hs="${k}" aria-pressed="${k === heatSort}">${l}</button>`).join("")}</div></div></div>
-      <div class="hm-legend" aria-hidden="true"><span>圖例</span>${scaleList().reverse().map(v => `<span class="hm-k"><i class="hm" ${hmStyle(v)}>${v}</i>${scaleMax() > 5 ? "" : esc(scaleLabel(v))}</span>`).join("")}<span class="hm-k"><i class="hm h0">·</i>未評</span><span class="hm-k"><i class="hm hx" ${hmStyle(scaleMax())}>${scaleMax()}</i>差距 ≥ 2 的最高／最低</span></div>
+      <div class="hm-legend" aria-hidden="true"><span>圖例</span>${scaleList().reverse().map(v => `<span class="hm-k"><i class="hm" ${hmStyle(v)}>${v}</i>${scaleMax() > 5 ? "" : esc(scaleLabel(v))}</span>`).join("")}${scaleMax() > 5 && !scaleNoLabel() ? `<span class="hm-k">${esc(scaleGroups().map(g => `${g.hi === g.lo ? g.hi : `${g.hi}–${g.lo}`} ${g.label}`).join("｜"))}</span>` : ""}<span class="hm-k"><i class="hm h0">·</i>未評</span><span class="hm-k"><i class="hm hx" ${hmStyle(scaleMax())}>${scaleMax()}</i>差距 ≥ 2 的最高／最低</span></div>
       <div class="tbl-wrap scroll"><table class="tbl dense heat"><thead><tr><th class="num">名次</th><th>編號</th><th>${esc(sd.cat.col1Label || "學校")}</th>${dbl ? `<th>${esc(sd.cat.col2Label || "")}</th>` : ""}
         ${sd.sj.map(j => `<th class="num hm-h">${esc(j.name)}</th>`).join("")}<th class="hm-avg">平均</th><th class="num">差距</th></tr></thead><tbody>
         ${rows.length ? rows.map(r => { const v = r.sc.filter(Boolean), mx = Math.max(...v), mn = Math.min(...v), g = v.length > 1 ? mx - mn : null, pos = r.pos ?? (r.avg != null ? r.rank : null);
           return `<tr><td class="num">${pos || '<span class="muted">—</span>'}</td><td class="nowrap"><b>${esc(r.e.code)}</b></td><td>${esc(r.e.org)}</td>${dbl ? `<td>${esc(r.e.name || "")}</td>` : ""}
-            ${r.sc.map((x, i) => `<td class="hm ${x ? "" : "h0"}${g >= 2 && (x === mx || x === mn) ? " hx" : ""}" ${hmStyle(x)} title="${esc(sd.sj[i].name)}：${x ? `${x} 分・${scaleLabel(x)}` : "未評"}">${x || "·"}</td>`).join("")}
+            ${r.sc.map((x, i) => `<td class="hm ${x ? "" : "h0"}${g >= 2 && (x === mx || x === mn) ? " hx" : ""}" ${hmStyle(x)} title="${esc(sd.sj[i].name)}：${x ? `${x} 分${scaleDot(x)}` : "未評"}">${x || "·"}</td>`).join("")}
             <td class="hm-avg">${r.avg != null ? `<span class="hbar"><i style="width:${r.avg / scaleMax() * 100}%"></i></span><b>${fmtAvg(r.avg)}</b>` : '<span class="muted">—</span>'}</td>
             <td class="num">${g == null ? '<span class="muted">—</span>' : g >= 2 ? `<span class="badge gap-badge">${I("alert", "sm")}${g}</span>` : g}</td></tr>`; }).join("") : `<tr><td colspan="${span + sd.sj.length + 2}" class="empty">此類別尚無參賽資料</td></tr>`}</tbody>
         ${sd.sj.length && tn ? `<tfoot><tr><th colspan="${span}" style="text-align:right">各委員平均給分</th>${st.map(x => `<td class="num"><b>${x.m != null ? fmtAvg(x.m) : "—"}</b><small>${x.n} 件</small></td>`).join("")}<td class="hm-avg"><b>${gm != null ? fmtAvg(gm) : "—"}</b> <small>全體</small></td><td></td></tr></tfoot>` : ""}</table></div>`);
@@ -4170,7 +4189,7 @@ AdminTabs.results = pane => {
         fd.list.length ? fd.list.map((r, i) => `<tr data-row data-eid="${r.e.id}" draggable="${!lk && !!r.pos}" class="${r.award ? "aw" + (aw.findIndex(x => x.name === r.award) + 1) : ""}${r.pos ? "" : " unrated"}${r.pos && qAt[r.pos] ? " qline" : ""}">
           <td class="drag" title="${lk ? "已鎖定" : r.pos ? "拖曳調整名次" : "尚未評分"}" aria-hidden="true">${lk ? I("lock", "sm") : r.pos ? "⋮⋮" : ""}</td><td class="num c-pos">${r.pos ? `<span class="fpos">${r.pos}</span>` : `<span class="fpos none" title="尚未評分，不列名次">—</span>`}${qTag(r, i)}</td><td><b>${esc(r.e.code)}</b></td><td>${esc(r.e.org)}</td>${dbl ? `<td>${esc(r.e.name)}</td>` : ""}
           <td class="num"><b>${r.avg != null ? fmtAvg(r.avg) : "—"}</b>${i && fd.list[i - 1].avg != null && r.avg != null && Math.abs(fd.list[i - 1].avg - r.avg) < 1e-9 ? '<span class="badge" title="與上一名平均相同" style="margin-left:4px">同分</span>' : ""}</td>
-          ${scale ? `<td class="num">${fd.display === "level" ? `<span class="lvl-pick" role="radiogroup" aria-label="${esc(r.e.org)} 決議等級">${scaleList().map(v => `<button class="lv${r.level === v ? " on" : ""}${r.level === v && !r.levelSet ? " auto" : ""}" data-r="lvl" data-v="${v}" role="radio" aria-checked="${r.level === v}" ${dis} title="${v} 分・${scaleLabel(v)}${r.level === v && !r.levelSet ? "（依平均換算，尚未決議）" : ""}">${v}</button>`).join("")}</span>`
+          ${scale ? `<td class="num">${fd.display === "level" ? `<span class="lvl-pick" role="radiogroup" aria-label="${esc(r.e.org)} 決議等級">${scaleList().map(v => `<button class="lv${r.level === v ? " on" : ""}${r.level === v && !r.levelSet ? " auto" : ""}" data-r="lvl" data-v="${v}" role="radio" aria-checked="${r.level === v}" ${dis} title="${v} 分${scaleDot(v)}${r.level === v && !r.levelSet ? "（依平均換算，尚未決議）" : ""}">${v}</button>`).join("")}</span>`
             : `<span class="lv-show">${r.level ? `■ ${r.level}　<small>${scaleLabel(r.level)}</small>` : "—"}</span>`}</td>` : ""}
           <td class="num small c-js">${r.sc.map(x => x || "–").join("・")}</td>
           <td><select class="input sm fawd" data-eid="${r.e.id}" aria-label="${esc(r.e.org)} 等第" ${dis}><option value="">—</option>${aw.map(x => `<option ${x.name === r.award ? "selected" : ""}>${esc(x.name)}</option>`).join("")}${r.award && !aw.some(x => x.name === r.award) ? `<option selected>${esc(r.award)}</option>` : ""}</select></td>
@@ -4345,7 +4364,7 @@ function finalHTMLScale(fd) {
   return `<div class="sheet">
     <p class="s-h1">${esc(S.cfg?.title || DEFAULT_TITLE)}</p>
     <p class="s-title"><b>【${esc(sd.cat.name)}】評定結果</b></p>
-    <p>※ ${scaleNote(true)}</p>
+    ${scaleNoLabel() ? "" : `<p>※ ${scaleNote(true)}</p>`}
     <table><colgroup>${W.map(w => `<col style="width:${(w / tot * 100).toFixed(2)}%">`).join("")}</colgroup>
       <thead><tr><th rowspan="2">名次</th><th rowspan="2">編號</th><th rowspan="2">${esc(sd.cat.col1Label || (dbl ? "機關學校" : "學校"))}</th>${dbl ? `<th rowspan="2">${esc(sd.cat.col2Label || "團體名稱")}</th>` : ""}<th colspan="${nS}">評分</th><th rowspan="2">等第</th><th rowspan="2">備註</th></tr>
       <tr>${scaleList().map(v => `<th class="sc">${v}</th>`).join("")}</tr></thead>
@@ -4394,7 +4413,7 @@ async function finalDocx(fd) {
     sections: [{ properties: { page: { size: { width: 11906, height: 16838 }, margin: { top: 720, right: 720, bottom: 720, left: 720 } } }, children: [
       para(run(S.cfg?.title || DEFAULT_TITLE, { size: 28, bold: true }), C),
       para(run(`【${sd.cat.name}】評定結果`, { bold: true }), C),
-      para(run(scale ? "※ " + scaleNote(false) : `評分委員：${sd.sj.map(j => j.name).join("、") || "—"}　　製表時間：${fmtDT(Date.now())}`, { size: 22 })),
+      para(run(scale ? (scaleNoLabel() ? `製表時間：${fmtDT(Date.now())}` : "※ " + scaleNote(false)) : `評分委員：${sd.sj.map(j => j.name).join("、") || "—"}　　製表時間：${fmtDT(Date.now())}`, { size: 22 })),
       new D.Table({ rows, width: { size: W.reduce((a, b) => a + b, 0), type: D.WidthType.DXA }, columnWidths: W, layout: D.TableLayoutType.FIXED }),
       ...(sum ? [para(run(`獎項統計：${sum}`, { size: 22 }), { spacing: { before: 120 } })] : []),
       ...(sd.cat.note ? [para(run(`備註：${sd.cat.note}`, { size: 22 }))] : []),
