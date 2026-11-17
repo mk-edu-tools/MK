@@ -231,11 +231,11 @@ textarea.input{resize:vertical;line-height:1.7}
 .sbtn:hover:not(:disabled){border-color:var(--line-strong);transform:translateY(-1px)}
 .sbtn[aria-checked=true]{color:#fff;transform:none;box-shadow:0 4px 12px rgba(0,0,0,.15)}
 .sbtn[aria-checked=true] .l{color:rgba(255,255,255,.95)}
-.sbtn[data-v="5"][aria-checked=true]{background:var(--s5);border-color:var(--s5)}
-.sbtn[data-v="4"][aria-checked=true]{background:var(--s4);border-color:var(--s4)}
-.sbtn[data-v="3"][aria-checked=true]{background:var(--s3);border-color:var(--s3)}
-.sbtn[data-v="2"][aria-checked=true]{background:var(--s2);border-color:var(--s2)}
-.sbtn[data-v="1"][aria-checked=true]{background:var(--s1);border-color:var(--s1)}
+.sbtn[data-b="5"][aria-checked=true]{background:var(--s5);border-color:var(--s5)}
+.sbtn[data-b="4"][aria-checked=true]{background:var(--s4);border-color:var(--s4)}
+.sbtn[data-b="3"][aria-checked=true]{background:var(--s3);border-color:var(--s3)}
+.sbtn[data-b="2"][aria-checked=true]{background:var(--s2);border-color:var(--s2)}
+.sbtn[data-b="1"][aria-checked=true]{background:var(--s1);border-color:var(--s1)}
 .sbtn:disabled{cursor:not-allowed;opacity:.55}
 .scale-foot{display:flex;justify-content:flex-end;margin-top:6px;min-height:38px}
 .kbd{display:inline-block;font-size:calc(12px*var(--fz,1));padding:0 6px;border:1px solid var(--line-strong);border-bottom-width:2px;border-radius:4px;background:#fff;color:var(--muted)}
@@ -954,6 +954,36 @@ kbd{display:inline-block;padding:0 6px;border:1px solid var(--line-strong);borde
 .sig-prev img{max-width:100%;max-height:160px}
 .sig-cell{white-space:nowrap}
 .sig-th{height:30px;max-width:110px;object-fit:contain;vertical-align:middle;margin-right:6px}
+
+/* ---------- 6～10 等第的評分按鈕、等第說明設定 ---------- */
+.scale.many{gap:6px}
+.scale.many .sbtn{min-height:66px;padding:6px 0;gap:2px;border-radius:10px}
+.scale.many .sbtn .n{font-size:calc(22px*var(--fz,1))}
+.scale.many .sbtn .l{font-size:calc(11px*var(--fz,1));white-space:normal;text-align:center;line-height:1.2;padding:0 2px}
+@media (max-width:720px){.scale.many{grid-template-columns:repeat(5,1fr)!important}}
+.sc-labels{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:6px 12px;flex:1;min-width:0}
+.sc-lb{display:flex;align-items:center;gap:8px}
+.sc-lb .pill{min-width:28px;justify-content:center;text-align:center}
+.sc-lb .input{flex:1;min-width:0}
+/* ---------- 同分提醒 ---------- */
+#tieBox{display:grid;gap:8px}
+#tieBox:not(:empty){margin-top:10px}
+.tie{display:flex;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface-2);font-size:calc(14px*var(--fz,1))}
+.tie.warn{border-color:#efd9a0;background:#fffaf0}
+.tie.warn>.ic{color:#a9781c;flex:none;margin-top:2px}
+.tie p{margin:2px 0 0;color:var(--muted);font-size:calc(13px*var(--fz,1))}
+details.tie{display:block}
+details.tie summary{display:flex;align-items:center;gap:8px;cursor:pointer;list-style:none}
+details.tie summary::-webkit-details-marker{display:none}
+.tie-note{margin:0 0 12px}
+.tie-note p{margin:2px 0 8px;font-size:calc(13.5px*var(--fz,1))}
+.tie-g{display:flex;gap:10px;align-items:flex-start;padding:6px 0;border-top:1px dashed #e8d6a6}
+.tie-g .ck-list{margin-top:0}
+.tie-r{flex:none;font-weight:700;font-size:calc(13.5px*var(--fz,1));padding-top:4px;min-width:6.5em}
+.mydist{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;margin:0 0 12px;padding:8px 14px;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+.md{display:inline-flex;align-items:center;gap:6px;font-size:calc(13.5px*var(--fz,1));color:var(--muted)}
+.md.multi{color:var(--ink);font-weight:500}
+.anon-seg{display:flex}.anon-seg button{flex:1}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 @media print{.no-print{display:none!important}}
 </style>
@@ -1020,7 +1050,34 @@ const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const pad2 = n => String(n).padStart(2, "0");
-const scaleLabel = v => (SCALE.find(s => s.v === v) || {}).label || "";
+/* 評分等第可由管理者設定為 5～10 級（評選設定）。SCALE 的五個名稱同時是「級別」：顏色、參考評語等級都以這五級為準。 */
+const bandLabel = v => (SCALE.find(s => s.v === v) || {}).label || "";
+const scaleMax = () => { const n = Math.round(+S.cfg?.scaleMax || 5); return n >= 5 && n <= 10 ? n : 5; };
+const scaleList = (n = scaleMax()) => Array.from({ length: n }, (_, i) => n - i);
+/** 分數 → 五級別（1～5）：用於顏色與參考評語等級 */
+const sb = (v, n = scaleMax()) => v ? Math.min(5, Math.max(1, Math.ceil(v * 5 / n))) : 0;
+const scaleLabel = (v, n = scaleMax()) => { const c = n === scaleMax() ? S.cfg?.scaleLabels?.[v - 1] : ""; return (c && String(c).trim()) || bandLabel(sb(v, n)); };
+const NUM_ZH = { 5: "五", 6: "六", 7: "七", 8: "八", 9: "九", 10: "十" };
+/** 評分說明：相同名稱的連續分數合併，例如「10～9分代表優良出眾；…」 */
+function scaleGroups() { const g = []; scaleList().forEach(v => { const l = scaleLabel(v), last = g.at(-1); if (last && last.label === l) last.lo = v; else g.push({ hi: v, lo: v, label: l }); }); return g; }
+const scaleNote = bold => scaleGroups().map(g => { const t = g.hi === g.lo ? String(g.hi) : `${g.hi}～${g.lo}`; return `${bold ? `<b>${t}</b>` : t}分代表${bold ? esc(g.label) : g.label}`; }).join("；") + "。";
+/** 個別評分表欄寬（twips）：等第越多，分數欄越窄 */
+function sheetCols(dbl, ws) {
+  if (!ws) return { W: COLW_NS[dbl ? "double" : "single"], cw: 0, n: 0 };
+  const n = scaleMax(), cw = n <= 5 ? 560 : n <= 7 ? 440 : 360, lead = dbl ? (n > 7 ? [700, 1400, 1700] : [800, 1580, 1900]) : (n > 7 ? [900, 2000] : [1000, 2200]);
+  return { W: [...lead, ...Array(n).fill(cw), 10466 - lead.reduce((a, b) => a + b, 0) - n * cw], cw, n };
+}
+function finCols(dbl) {
+  const n = scaleMax(), cw = n <= 5 ? 450 : n <= 7 ? 380 : 320, big = n > 5, lead = dbl ? (big ? [650, 850, 2000, 1500] : [700, 900, 2300, 1800]) : (big ? [750, 950, 2600] : [800, 1000, 3000]), aw = dbl ? (big ? 1000 : 1200) : (big ? 1100 : 1300);
+  return { W: [...lead, ...Array(n).fill(cw), aw, 10466 - lead.reduce((a, b) => a + b, 0) - n * cw - aw], cw, n };
+}
+/** 熱度圖底色：依分數在 1～最高分之間內插 */
+function hmStyle(v) {
+  if (!v) return "";
+  const stops = ["#e6eff5", "#bcd5e6", "#86b1d1", "#3f7fb0", "#184f80"], t = (v - 1) / Math.max(1, scaleMax() - 1) * 4, i = Math.min(3, Math.floor(t)), f = t - i;
+  const c = hx(stops[i]).map((a, k) => Math.round(a + (hx(stops[i + 1])[k] - a) * f));
+  return `style="background:rgb(${c.join(",")});color:${t >= 2.6 ? "#fff" : "#122c44"}"`;
+}
 const userToEmail = u => `${String(u).trim().toLowerCase()}@${USERNAME_DOMAIN}`;
 const emailToUser = e => String(e || "").split("@")[0];
 const sortBy = (arr, ...keys) => arr.slice().sort((a, b) => {
@@ -1336,6 +1393,29 @@ function peerData(catId) {
   return { cat, js, sj, rows };
 }
 const softErr = tag => e => console.warn(tag, e);
+/* ---------- 同分提醒：找出「平均相同、名次並列」的學校（只比對全部評分委員都評過的） ---------- */
+function groupTies(list) {   // list：[{ id, avg }]
+  const l = list.slice().sort((a, b) => b.avg - a.avg), out = []; let rank = 0;
+  l.forEach((x, i) => { if (!i || Math.abs(l[i - 1].avg - x.avg) > 1e-9) { rank = i + 1; out.push({ r: rank, ids: [x.id] }); } else out.at(-1).ids.push(x.id); });
+  return out.filter(g => g.ids.length > 1);
+}
+/** 管理者端：自動把各類別的並列名單寫到 config/ties，供委員端提醒（不含平均與個別分數） */
+let tiesBusy = false, tiesOff = false, tiesRef = [];
+function syncTies() {
+  if (S.role !== "admin" || tiesBusy || tiesOff || !ready("cats", "entries", "judges", "scores", "cfg", "ties")) return;
+  const ref = [S.scores, S.entries, S.cats, S.judges, S.cfg, S.ties]; if (ref.every((x, i) => x === tiesRef[i])) return; tiesRef = ref;
+  const want = {};
+  if (S.cfg?.tieHint !== false) allCats().forEach(c => { const sd = summaryData(c.id); if (!sd || !sd.sj.length) return; const g = groupTies(sd.rows.filter(r => r.avg != null && r.n >= sd.sj.length).map(r => ({ id: r.e.id, avg: r.avg }))); if (g.length) want[c.id] = g; });
+  if (JSON.stringify(want) === JSON.stringify(S.ties?.cats || {})) return;
+  tiesBusy = true;
+  B.set("config", "ties", { cats: want, updatedAt: Date.now() }).catch(e => { console.warn("ties", e); tiesOff = true; }).finally(() => { tiesBusy = false; });
+}
+/** 委員端：某類別目前的並列群組。已開放互看時自行計算，否則讀管理者端發布的名單 */
+function tiesOf(catId) {
+  if (S.cfg?.tieHint === false) return [];
+  if (canPeer(catId) && S.peer.loaded.has("scores" + catId)) { const pd = peerData(catId); return pd && pd.sj.length ? groupTies(pd.rows.filter(r => r.avg != null && r.sc.filter(Boolean).length >= pd.sj.length).map(r => ({ id: r.e.id, avg: r.avg }))) : []; }
+  return S.ties?.cats?.[catId] || [];
+}
 /** 參考評語：管理者一律訂閱；委員只有在管理者開放時才訂閱 */
 function syncRefsSub() {
   const want = S.role === "admin" || (S.role === "judge" && S.cfg?.refEnabled === true);
@@ -1363,11 +1443,13 @@ function subscribeJudge() {
   watchInto("comments", "comments", mine);
   watchInto("subs", "submissions", mine);
   unsubs.push(B.watchDoc("config", "roster", d => { S.roster = d; scheduleUpdate(); }, softErr("roster")));
+  unsubs.push(B.watchDoc("config", "ties", d => { S.ties = d; scheduleUpdate(); }, softErr("ties")));
 }
 function subscribeAdmin() {
   subscribeCommon();
   ["scores:scores", "comments:comments", "subs:submissions", "judges:judges", "admins:admins", "results:results", "templates:templates"].forEach(x => { const [k, c] = x.split(":"); watchInto(k, c, null); });
   unsubs.push(B.watchDoc("config", "roster", d => { S.roster = d; S.loaded.add("roster"); scheduleUpdate(); }, softErr("roster")));
+  unsubs.push(B.watchDoc("config", "ties", d => { S.ties = d; S.loaded.add("ties"); scheduleUpdate(); }, softErr("ties")));
 }
 /** 寫入包裝：顯示同步狀態、錯誤訊息 */
 function W(p, okMsg) {
@@ -1502,7 +1584,7 @@ function mountView(name, params = {}) {
   scrollTo(0, 0);
   current.update?.(); updateChrome();
 }
-function scheduleUpdate() { if (rafId) return; rafId = requestAnimationFrame(() => { rafId = 0; try { syncPeerSub(); syncRoster(); syncLook(); applyFz(); } catch (e) { console.error(e); } try { current?.update?.(); } catch (e) { console.error(e); } updateChrome(); }); }
+function scheduleUpdate() { if (rafId) return; rafId = requestAnimationFrame(() => { rafId = 0; try { syncPeerSub(); syncRoster(); syncTies(); syncLook(); applyFz(); } catch (e) { console.error(e); } try { current?.update?.(); } catch (e) { console.error(e); } updateChrome(); }); }
 function parseHash() { const h = location.hash.replace(/^#\/?/, ""); const [p, q] = h.split("?"); return { parts: p.split("/").filter(Boolean).map(decodeURIComponent), q: Object.fromEntries(new URLSearchParams(q || "")) }; }
 function route() {
   if (!S.role) return;
@@ -1664,7 +1746,7 @@ async function startSession(u) {
 }
 async function doLogout(msg) {
   clearSubs(); const r = S.role; S.role = null; S.user = null; S.me = null;
-  S.cats = S.entries = S.scores = S.comments = S.subs = S.judges = S.admins = S.results = S.refs = []; S.roster = null; rosterOff = false;
+  S.cats = S.entries = S.scores = S.comments = S.subs = S.judges = S.admins = S.results = S.refs = []; S.roster = null; rosterOff = false; S.ties = null; tiesOff = false; tiesRef = [];
   try { await B.logout(); } catch {}
   history.replaceState(null, "", location.pathname);
   mountView("login", { msg: msg || (r ? "您已登出。" : "") });
@@ -1689,6 +1771,7 @@ Views.home = el => {
     <div id="lockNote"></div>
     <div class="tabs" role="tablist" id="tabs" aria-label="參賽類別"></div>
     <section class="sumbar" id="sumbar"></section>
+    <div id="tieNote"></div>
     <div class="toolbar">
       <div class="search">${I("search")}<input class="input" id="q" type="search" placeholder="搜尋編號、學校或名稱" aria-label="搜尋" value="${esc(S.ui.q)}"></div>
       <div class="seg" role="group" aria-label="篩選" id="flt"><button data-f="all">全部</button><button data-f="todo">未完成</button><button data-f="done">已完成</button></div>
@@ -1738,7 +1821,7 @@ Views.home = el => {
     setHTML(g, list.map(e => {
       const sc = scorer ? scoreOf(e.id) : null, n = commentsOf(e.id).length, dr = (ls.get(draftKey(e.id), "") || "").trim();
       return `<button class="ecard" data-entry="${e.id}" aria-label="${esc(`${e.code} ${e.org} ${e.name || ""}，${scorer ? (sc ? `已評 ${sc} 分` : "未評分") : ""}，審查意見 ${n} 則`)}">
-        ${scorer ? `<span class="ec-score ${sc ? "s s" + sc : ""}" aria-hidden="true">${sc || "未評"}</span>` : `<span class="ec-score ${n ? "cm" : ""}" aria-hidden="true">${n ? n + "則" : "未寫"}</span>`}
+        ${scorer ? `<span class="ec-score ${sc ? "s s" + sb(sc) : ""}" aria-hidden="true">${sc || "未評"}</span>` : `<span class="ec-score ${n ? "cm" : ""}" aria-hidden="true">${n ? n + "則" : "未寫"}</span>`}
         <span class="ec-body"><span class="code">${esc(e.code)}</span><span class="org">${esc(e.org)}</span>${e.name ? `<span class="nm">${esc(e.name)}</span>` : ""}
           <span class="meta">${sc ? `<span>${scaleLabel(sc)}</span>` : ""}<span>${I("msg", "sm")}意見 ${n} 則</span>${dr ? `<span class="draft-tag">有未儲存的草稿</span>` : ""}${S.scores.some(x => x.entryId === e.id && x.editedBy) || commentsOf(e.id).some(c => c.editedBy) ? `<span class="px-flag inline">${I("edit", "sm")}管理者代修</span>` : ""}</span></span>
         <span class="ec-go">${I("right")}</span></button>`;
@@ -1756,7 +1839,20 @@ Views.home = el => {
     const m = peerMode();
     setHTML($("#homeActs", el), fzSegHTML() + (m === "off" || !peerCats().length ? "" : `<button class="btn" data-nav="#/peer/${canPeer(S.ui.catId) ? S.ui.catId : ""}" title="管理者已開放${m === "all" ? "全部類別" : "您負責的類別"}：可查看其他委員的評分與審查意見">${I("users", "sm")}委員評分對照</button>`));
   }
-  function update() { if (!ready("cats", "entries")) { renderGrid(); return; } renderTabs(); renderActs(); renderLock(); renderSum(); renderGrid(); }
+  /** 同分提醒：平均同分並列的學校，以及自己各分數給了幾所 */
+  function renderTies() {
+    const box = $("#tieNote", el), cat = catOf(S.ui.catId); if (!box) return; if (!cat) return setHTML(box, "");
+    const es = catEntries(cat.id), byId = Object.fromEntries(es.map(x => [x.id, x])), chip = x => `<a class="ck-chip" href="#/entry/${x.id}" data-nav="#/entry/${x.id}"><b>${esc(x.code)}</b>${esc(x.org)}</a>`;
+    const gs = tiesOf(cat.id).map(g => ({ r: g.r, l: g.ids.map(id => byId[id]).filter(Boolean) })).filter(g => g.l.length > 1);
+    let h = gs.length ? `<div class="notice warn tie-note">${I("alert")}<div><b>同分提醒：有 ${gs.length} 組學校平均同分、名次並列</b><p>以下學校全體委員的平均分數相同，名次分不出先後。如果您認為有高下之分，可以點進去調整評分。</p>
+      ${gs.map(g => `<div class="tie-g"><span class="tie-r">並列第 ${g.r} 名</span><div class="ck-list">${g.l.map(chip).join("")}</div></div>`).join("")}</div></div>` : "";
+    if (isScorer(cat.id)) {
+      const d = scaleList().map(v => ({ v, l: es.filter(x => scoreOf(x.id) === v) })), any = d.some(x => x.l.length);
+      if (any) h += `<div class="mydist" aria-label="我的給分分布"><span class="small muted">我的給分</span>${d.map(x => `<span class="md ${x.l.length > 1 ? "multi" : ""}" title="${esc(x.l.map(y => y.code + " " + y.org).join("、") || "尚無")}"><span class="pill s s${sb(x.v)}">${x.v}</span>${x.l.length} 所</span>`).join("")}<span class="small muted">（同一分數給太多所，平均就容易同分）</span></div>`;
+    }
+    setHTML(box, h);
+  }
+  function update() { if (!ready("cats", "entries")) { renderGrid(); return; } renderTabs(); renderActs(); renderLock(); renderSum(); renderTies(); renderGrid(); }
   return { update };
 };
 
@@ -1803,7 +1899,7 @@ Views.peer = (el, { catId }) => {
       ${pd.sj.map(j => `<th class="num ${j.me ? "pv-me" : ""}">${esc(j.name)}${j.me ? `<div class="pv-you">您</div>` : ""}</th>`).join("")}<th class="num">平均</th><th class="num">差距</th><th class="num">審查意見</th></tr></thead><tbody>
       ${rows.map(r => { const op = open.has(r.e.id) && r.nc;
         return `<tr data-eid="${r.e.id}" ${r.nc ? 'data-nc="1"' : ""} class="${op ? "pv-open" : ""}"><td class="nowrap"><b>${esc(r.e.code)}</b></td><td>${esc(r.e.org)}</td>${dbl ? `<td>${esc(r.e.name || "")}</td>` : ""}
-          ${r.sc.map((x, i) => `<td class="num ${pd.sj[i].me ? "pv-me" : ""}">${x ? `<span class="pill s s${x}" title="${scaleLabel(x)}">${x}</span>` : '<span class="muted">—</span>'}</td>`).join("")}
+          ${r.sc.map((x, i) => `<td class="num ${pd.sj[i].me ? "pv-me" : ""}">${x ? `<span class="pill s s${sb(x)}" title="${scaleLabel(x)}">${x}</span>` : '<span class="muted">—</span>'}</td>`).join("")}
           <td class="num"><b>${r.avg != null ? fmtAvg(r.avg) : "—"}</b></td>
           <td class="num">${r.gap == null ? '<span class="muted">—</span>' : r.gap >= 2 ? `<span class="badge gap-badge" title="委員評分差距較大，建議討論">${I("alert", "sm")}${r.gap}</span>` : r.gap}</td>
           <td class="num">${r.nc ? `<button class="btn ghost sm pv-tg" aria-expanded="${!!op}" aria-label="${op ? "收合" : "展開"} ${esc(r.e.org)} 的審查意見">${r.nc} 則${I(op ? "up" : "down", "sm")}</button>` : '<span class="muted">—</span>'}</td></tr>
@@ -1861,10 +1957,11 @@ Views.entry = (el, { entryId }) => {
           ${isScorer(cat.id) ? "" : `<div class="notice info">${I("info")}<span>本類別由 <b>${esc((cat.scorerNames || []).join("、") || "指定委員")}</b> 評分，您只需填寫審查意見。</span></div>`}
           <section class="card wcard" aria-labelledby="h-score" ${isScorer(cat.id) ? "" : "hidden"}>
             <div class="card-h"><h2 id="h-score">評分</h2><span class="sstate" id="scoreState" aria-live="polite"></span>
-              <span class="spacer"></span><span class="small muted kbd-hint">鍵盤 <span class="kbd">1</span>～<span class="kbd">5</span></span><button class="btn ghost sm" id="clrScore">清除</button></div>
-            <div class="scale" role="radiogroup" aria-labelledby="h-score" id="scale">
-              ${SCALE.map(s => `<button class="sbtn" role="radio" data-v="${s.v}" aria-checked="false"><span class="n">${s.v}</span><span class="l">${s.label}</span></button>`).join("")}
+              <span class="spacer"></span><span class="small muted kbd-hint">鍵盤 <span class="kbd">1</span>～<span class="kbd">${scaleMax() === 10 ? "0" : scaleMax()}</span>${scaleMax() === 10 ? "（0＝10 分）" : ""}</span><button class="btn ghost sm" id="clrScore">清除</button></div>
+            <div class="scale ${scaleMax() > 5 ? "many" : ""}" role="radiogroup" aria-labelledby="h-score" id="scale" data-n="${scaleMax()}" style="grid-template-columns:repeat(${scaleMax()},1fr)">
+              ${scaleList().map(v => `<button class="sbtn" role="radio" data-v="${v}" data-b="${sb(v)}" aria-checked="false"><span class="n">${v}</span><span class="l">${esc(scaleLabel(v))}</span></button>`).join("")}
             </div>
+            <div id="tieBox"></div>
           </section>
           <details class="card wcard peerbox" id="peerCard" hidden ${ls.get("rj_peer_open", false) ? "open" : ""}>
             <summary><span class="pb-t">${I("users", "sm")}其他委員的評分與意見</span><span class="pb-sum" id="peerSum"></span></summary>
@@ -1906,8 +2003,8 @@ Views.entry = (el, { entryId }) => {
     $("#scale", el).addEventListener("click", ev => { const b = ev.target.closest("[data-v]"); if (b) setScore(+b.dataset.v); });
     $("#scale", el).addEventListener("keydown", ev => {
       const cur = scoreOf(entryId) || 0; let n = null;
-      if (["ArrowLeft", "ArrowUp"].includes(ev.key)) n = Math.min(5, cur + 1 || 5);
-      if (["ArrowRight", "ArrowDown"].includes(ev.key)) n = Math.max(1, (cur || 6) - 1);
+      if (["ArrowLeft", "ArrowUp"].includes(ev.key)) n = Math.min(scaleMax(), cur + 1 || scaleMax());
+      if (["ArrowRight", "ArrowDown"].includes(ev.key)) n = Math.max(1, (cur || scaleMax() + 1) - 1);
       if (n) { ev.preventDefault(); setScore(n); setTimeout(() => $(`.sbtn[data-v="${n}"]`, el)?.focus(), 30); }
     });
     $("#clrScore", el).onclick = async () => {
@@ -1985,9 +2082,9 @@ Views.entry = (el, { entryId }) => {
     if (!row) { box.hidden = true; return; }
     box.hidden = false;
     const others = pd.js.filter(j => !j.me), sOf = j => { const i = pd.sj.indexOf(j); return i < 0 ? null : row.sc[i]; };
-    setHTML($("#peerSum", el), others.map(j => { const x = sOf(j); return pd.sj.includes(j) ? `<span class="pb-chip">${esc(j.name)} ${x ? `<span class="pill s s${x}">${x}</span>` : `<span class="pill">—</span>`}</span>` : ""; }).join("") + (row.avg != null ? `<span class="pb-chip">平均 <b>${fmtAvg(row.avg)}</b></span>` : ""));
+    setHTML($("#peerSum", el), others.map(j => { const x = sOf(j); return pd.sj.includes(j) ? `<span class="pb-chip">${esc(j.name)} ${x ? `<span class="pill s s${sb(x)}">${x}</span>` : `<span class="pill">—</span>`}</span>` : ""; }).join("") + (row.avg != null ? `<span class="pb-chip">平均 <b>${fmtAvg(row.avg)}</b></span>` : ""));
     setHTML($("#peerBody", el), (others.length ? others.map(j => { const x = sOf(j), cm = row.cm.find(c => c.j.id === j.id);
-      return `<div class="pb-j"><div class="pb-h"><b>${esc(j.name)}</b>${pd.sj.includes(j) ? (x ? `<span class="pill s s${x}">${x}</span><span class="small muted">${scaleLabel(x)}</span>` : `<span class="small muted">尚未評分</span>`) : `<span class="small muted">只寫意見</span>`}${j.sub ? `<span class="badge ok">${I("lock", "sm")}已送出</span>` : ""}</div>
+      return `<div class="pb-j"><div class="pb-h"><b>${esc(j.name)}</b>${pd.sj.includes(j) ? (x ? `<span class="pill s s${sb(x)}">${x}</span><span class="small muted">${scaleLabel(x)}</span>` : `<span class="small muted">尚未評分</span>`) : `<span class="small muted">只寫意見</span>`}${j.sub ? `<span class="badge ok">${I("lock", "sm")}已送出</span>` : ""}</div>
         ${cm ? `<ol>${cm.list.map(t => `<li>${esc(t)}</li>`).join("")}</ol>` : `<p class="small muted">尚無審查意見</p>`}</div>`; }).join("") : `<p class="small muted">${S.peer.err ? "目前無法讀取其他委員的資料，請洽管理者。" : "本類別尚無其他委員。"}</p>`)
       + `<div class="pb-foot"><button class="btn sm" data-nav="#/peer/${en.catId}">${I("users", "sm")}查看本類別全部對照</button></div>`);
   }
@@ -2035,7 +2132,7 @@ Views.entry = (el, { entryId }) => {
     if ($(".overlay")) return;
     const tag = (ev.target.tagName || "").toLowerCase(); if (["input", "textarea", "select"].includes(tag)) return;
     if (ev.altKey || ev.ctrlKey || ev.metaKey) return;
-    if (/^[1-5]$/.test(ev.key)) { ev.preventDefault(); setScore(+ev.key); }
+    if (/^[0-9]$/.test(ev.key)) { const v = ev.key === "0" ? 10 : +ev.key; if (v <= scaleMax()) { ev.preventDefault(); setScore(v); } }
     else if (ev.key === "ArrowRight" && !ev.target.closest(".scale")) go(1);
     else if (ev.key === "ArrowLeft" && !ev.target.closest(".scale")) go(-1);
   }
@@ -2049,6 +2146,15 @@ Views.entry = (el, { entryId }) => {
     S.scoreState[entryId] = { s: "busy" }; scheduleUpdate();
     W(B.batch([{ op: "set", c: "scores", id, d: rec }, auditOp("score.set", { catId: en.catId, entryId, from: prev?.score ?? "", to: v })])).then(() => { S.scoreState[entryId] = { s: "ok", t: Date.now() }; scheduleUpdate(); })
       .catch(() => { S.scores = S.scores.filter(s => s.id !== id).concat(prev ? [prev] : []); S.scoreState[entryId] = { s: "err" }; scheduleUpdate(); });
+  }
+  /** 評分當下的同分提醒：這一校是否與其他學校平均同分並列，以及自己還給了哪些學校同樣的分數 */
+  function renderTie() {
+    const box = $("#tieBox", el); if (!box) return; const en = e(), sc = scoreOf(entryId), sib = siblings(), byId = Object.fromEntries(sib.map(x => [x.id, x]));
+    const chip = x => `<a class="ck-chip" href="#/entry/${x.id}" data-nav="#/entry/${x.id}"><b>${esc(x.code)}</b>${esc(x.org)}</a>`;
+    const g = tiesOf(en.catId).find(x => x.ids.includes(entryId)), ot = g ? g.ids.filter(id => id !== entryId).map(id => byId[id]).filter(Boolean) : [];
+    const same = sc ? sib.filter(x => x.id !== entryId && scoreOf(x.id) === sc) : [];
+    setHTML(box, (ot.length ? `<div class="tie warn">${I("alert", "sm")}<div><b>平均同分：本校與 ${ot.length} 所學校並列第 ${g.r} 名</b><p>全體委員的平均分數相同，名次分不出先後。若您認為有高下之分，可調整評分。</p><div class="ck-list">${ot.map(chip).join("")}</div></div></div>` : "")
+      + (same.length ? `<details class="tie"><summary>${I("info", "sm")}<b>您給 ${sc} 分的還有 ${same.length} 所</b><span class="small muted">點開查看</span></summary><div class="ck-list">${same.map(chip).join("")}</div></details>` : ""));
   }
   function renderScoreState() {
     const box = $("#scoreState", el); if (!box) return;
@@ -2104,10 +2210,10 @@ Views.entry = (el, { entryId }) => {
     $$("#refTab [data-t]", el).forEach(b => { b.setAttribute("aria-pressed", b.dataset.t === refTab); b.textContent = b.dataset.t === "mine" ? `本校歷年（${mine.length}）` : `本類別全部（${common.length}）`; });
     let src = (refTab === "mine" ? mine : common).filter(r => !q || [r.text, r.org].join(" ").toLowerCase().includes(q));
     /* 依等級：跟著委員評分自動切換（可手動改）；該等級評語在前，通用評語接在後面 */
-    const sc = scoreOf(entryId) || 0; if (sc !== lastSc) { if (lastSc !== undefined || refLv === "auto") refLv = sc ? String(sc) : "all"; lastSc = sc; }
-    if (refLv === "auto") refLv = sc ? String(sc) : "all";
+    const sc = scoreOf(entryId) || 0; if (sc !== lastSc) { if (lastSc !== undefined || refLv === "auto") refLv = sc ? String(sb(sc)) : "all"; lastSc = sc; }
+    if (refLv === "auto") refLv = sc ? String(sb(sc)) : "all";
     const lvs = refLevels(), lvN = v => src.filter(r => (+r.level || 0) === v).length;
-    setHTML($("#refLv", el), [["all", `全部`], ...lvs.map(v => [String(v), `${v} ${scaleLabel(v)}`]), ["0", "通用"]].map(([k, l]) => `<button data-l="${k}" aria-pressed="${refLv === k}" title="${k === "all" ? "顯示全部等級" : k === "0" ? "未分等級的通用評語" : `適合給 ${l} 分的評語`}">${l}${k === "all" ? "" : `<small>${lvN(+k)}</small>`}</button>`).join(""));
+    setHTML($("#refLv", el), [["all", `全部`], ...lvs.map(v => [String(v), scaleMax() > 5 ? bandLabel(v) : `${v} ${bandLabel(v)}`]), ["0", "通用"]].map(([k, l]) => `<button data-l="${k}" aria-pressed="${refLv === k}" title="${k === "all" ? "顯示全部等級" : k === "0" ? "未分等級的通用評語" : `適合給 ${l} 分的評語`}">${l}${k === "all" ? "" : `<small>${lvN(+k)}</small>`}</button>`).join(""));
     let divider = -1;
     if (refLv !== "all") { const v = +refLv, hit = src.filter(r => (+r.level || 0) === v); src = v ? hit.concat(src.filter(r => !(+r.level))) : hit; if (v) divider = hit.length; }
     refShown = src.slice(0, 150);
@@ -2180,7 +2286,7 @@ Views.entry = (el, { entryId }) => {
     if (!ready("cats", "entries", "cfg")) { if (!mounted) el.innerHTML = topbarHTML() + `<main class="wrap narrow"><div class="skeleton" style="height:60px;margin-bottom:16px"></div><div class="skeleton" style="height:180px"></div></main>`; return; }
     const en = e();
     if (!en) { el.innerHTML = topbarHTML() + `<main class="wrap narrow"><div class="empty">找不到此參賽隊伍（可能已被管理者刪除）。<br><br><button class="btn" data-nav="#/">返回列表</button></div></main>`; mounted = false; return; }
-    if (!mounted || !$("#scale", el)) mount();
+    if (!mounted || !$("#scale", el) || $("#scale", el).dataset.n !== String(scaleMax())) mount();
     if (!$("#scale", el)) return;
     const l = siblings(), i = l.findIndex(x => x.id === entryId), last = i >= l.length - 1;
     $("#pos", el).textContent = $("#pos3", el).textContent = `${i + 1} / ${l.length}`;
@@ -2199,11 +2305,11 @@ Views.entry = (el, { entryId }) => {
     }
     const edit = canEdit(en.catId), sc = scoreOf(entryId), scorer = isScorer(en.catId);
     if ($("section[aria-labelledby=h-score]", el).hidden === scorer) { mounted = false; return update(); }
-    $$(".sbtn", el).forEach(b => { b.setAttribute("aria-checked", +b.dataset.v === sc); b.disabled = !edit || !scorer; b.tabIndex = (+b.dataset.v === (sc || 5)) ? 0 : -1; });
+    $$(".sbtn", el).forEach(b => { b.setAttribute("aria-checked", +b.dataset.v === sc); b.disabled = !edit || !scorer; b.tabIndex = (+b.dataset.v === (sc || scaleMax())) ? 0 : -1; });
     $("#clrScore", el).hidden = !edit || !sc;
     $("#composer", el).hidden = !edit;
     setHTML($("#lockNote", el), edit ? "" : `<div class="notice ${windowState() === "open" ? "ok" : "danger"}">${I("lock")}<span>${esc(lockReason(en.catId))}。目前為唯讀檢視。</span></div>`);
-    renderScoreState(); renderList(); renderDraft(); renderRefs(); renderPeer(); layout();
+    renderScoreState(); renderTie(); renderList(); renderDraft(); renderRefs(); renderPeer(); layout();
   }
   return {
     update,
@@ -2375,6 +2481,7 @@ const SHEET_CSS = `
 .sheet table{width:100%;border-collapse:collapse;table-layout:fixed;margin-top:3pt}
 .sheet th,.sheet td{border:1px solid #000;padding:3pt 4pt;vertical-align:middle;text-align:center;font-weight:normal;word-break:break-word}
 .sheet td.op{text-align:left;vertical-align:top}
+.sheet th.sc,.sheet td.sc{padding-left:0;padding-right:0}
 .sheet ol{margin:0;padding-left:1.7em}
 .sheet ol li{padding-left:.2em}
 .sheet .cj+.cj{margin-top:4pt;padding-top:3pt;border-top:1px dashed #999}
@@ -2402,17 +2509,17 @@ function sheetData(catId, judgeUid) {
   return { cat, rows, judge, judgeUid, withScore };
 }
 function sheetHTML(d, sig, signs) {
-  const dbl = d.cat.layout === "double", ws = d.withScore !== false, W = (ws ? COLW : COLW_NS)[dbl ? "double" : "single"], tot = W.reduce((a, b) => a + b, 0), rs = ws ? ' rowspan="2"' : "";
+  const dbl = d.cat.layout === "double", ws = d.withScore !== false, { W, n: nS } = sheetCols(dbl, ws), tot = W.reduce((a, b) => a + b, 0), rs = ws ? ' rowspan="2"' : "";
   return `<div class="sheet">
     <p class="s-title">【${esc(d.cat.name)}】</p>
-    ${ws ? `<p>※ 請評審委員參酌審查指標，依照送審文件內容給予5~1分之評分：</p>
-    <p>※ <b>5</b>分代表優良出眾；<b>4</b>分代表良好；<b>3</b>分代表符合標準；<b>2</b>分代表尚可；<b>1</b>分代表不符標準。</p>`
+    ${ws ? `<p>※ 請評審委員參酌審查指標，依照送審文件內容給予${nS}~1分之評分：</p>
+    <p>※ ${scaleNote(true)}</p>`
     : `<p>※ 請評審委員參酌審查指標，依照送審文件內容填寫審查意見（本類別由指定委員評分）。</p>`}
     <table><colgroup>${W.map(w => `<col style="width:${(w / tot * 100).toFixed(2)}%">`).join("")}</colgroup>
-      <thead><tr><th${rs}>編號</th><th${rs}>${esc(d.cat.col1Label || (dbl ? "機關學校" : "學校"))}</th>${dbl ? `<th${rs}>${esc(d.cat.col2Label || "團體名稱")}</th>` : ""}${ws ? `<th colspan="5">評分</th>` : ""}<th${rs}>審查意見</th></tr>
-      ${ws ? `<tr><th>5</th><th>4</th><th>3</th><th>2</th><th>1</th></tr>` : ""}</thead>
+      <thead><tr><th${rs}>編號</th><th${rs}>${esc(d.cat.col1Label || (dbl ? "機關學校" : "學校"))}</th>${dbl ? `<th${rs}>${esc(d.cat.col2Label || "團體名稱")}</th>` : ""}${ws ? `<th colspan="${nS}">評分</th>` : ""}<th${rs}>審查意見</th></tr>
+      ${ws ? `<tr>${scaleList().map(v => `<th class="sc">${v}</th>`).join("")}</tr>` : ""}</thead>
       <tbody>${d.rows.map(r => `<tr><td>${esc(r.e.code)}</td><td>${esc(r.e.org)}</td>${dbl ? `<td>${esc(r.e.name || "")}</td>` : ""}
-        ${ws ? [5, 4, 3, 2, 1].map(v => `<td>${r.score === v ? "■" : ""}</td>`).join("") : ""}
+        ${ws ? scaleList().map(v => `<td class="sc">${r.score === v ? "■" : ""}</td>`).join("") : ""}
         <td class="op">${r.comments.length ? `<ol>${r.comments.map(t => `<li>${esc(t).replace(/\n/g, "<br>")}</li>`).join("")}</ol>` : ""}</td></tr>`).join("")}</tbody>
     </table>
     ${d.cat.note ? `<p class="s-note">備註：${esc(d.cat.note)}</p>` : ""}
@@ -2450,33 +2557,36 @@ function summaryData(catId) {
 const resManual = res => res ? (res.manual ?? !!res.locked) : false;
 const SUM_JW = 1040;
 const hasAward = sd => sd.rows.some(r => r.award);
+/** 匿名版用：把各委員的審查意見綜整成一份（去除完全相同的重複意見），不帶委員姓名 */
+function mergedComments(r) { const seen = new Set(), out = []; r.cm.forEach(c => c.list.forEach(t => { const k = t.trim(); if (k && !seen.has(k)) { seen.add(k); out.push(t); } })); return out; }
 function summaryCols(sd, showScores) {
   const dbl = sd.cat.layout === "double", n = showScores ? sd.sj.length : 0, JW = SUM_JW;
   const fixed = [900, 2000, ...(dbl ? [1700] : []), ...Array(n).fill(JW), 900, 760, ...(hasAward(sd) ? [1000] : [])];
   return [...fixed, Math.max(3600, 15398 - fixed.reduce((a, b) => a + b, 0))];
 }
 const fmtAvg = v => v == null ? "" : v.toFixed(2);
-function summaryHTML(sd, showScores, withSign) {
+function summaryHTML(sd, showScores, withSign, anon) {
+  if (anon) { showScores = false; withSign = false; }
   const dbl = sd.cat.layout === "double", n = showScores ? sd.sj.length : 0, W = summaryCols(sd, showScores), tot = W.reduce((a, b) => a + b, 0);
   const two = n > 0, rs = two ? ' rowspan="2"' : "", aw = hasAward(sd);
   return `<div class="sheet land">
     <p class="s-h1">${esc(S.cfg?.title || DEFAULT_TITLE)}</p>
     <p class="s-title"><b>【${esc(sd.cat.name)}】評分總表</b></p>
-    <p>評審委員：${sd.js.map(j => esc(j.name)).join("、") || "—"}（共 ${sd.js.length} 位）　　製表時間：${fmtDT(Date.now())}</p>
+    <p>${anon ? "" : `評審委員：${sd.js.map(j => esc(j.name)).join("、") || "—"}（共 ${sd.js.length} 位）　　`}製表時間：${fmtDT(Date.now())}</p>
     <table><colgroup>${W.map(w => `<col style="width:${(w / tot * 100).toFixed(2)}%">`).join("")}</colgroup>
       <thead><tr><th${rs}>編號</th><th${rs}>${esc(sd.cat.col1Label || (dbl ? "機關學校" : "學校"))}</th>${dbl ? `<th${rs}>${esc(sd.cat.col2Label || "團體名稱")}</th>` : ""}
         ${two ? `<th colspan="${n}">各委員評分</th>` : ""}<th${rs}>平均</th><th${rs}>名次</th>${aw ? `<th${rs}>等第</th>` : ""}<th${rs}>審查意見</th></tr>
         ${two ? `<tr>${sd.sj.map(j => `<th>${esc(j.name)}</th>`).join("")}</tr>` : ""}</thead>
       <tbody>${sd.rows.map(r => `<tr><td>${esc(r.e.code)}</td><td>${esc(r.e.org)}</td>${dbl ? `<td>${esc(r.e.name || "")}</td>` : ""}
         ${two ? r.sc.map(x => `<td>${x || ""}</td>`).join("") : ""}<td><b>${fmtAvg(r.avg)}</b></td><td>${(sd.manual ? r.final : r.rank) || ""}</td>${aw ? `<td><b>${esc(r.award)}</b></td>` : ""}
-        <td class="op">${r.cm.map(c => `<div class="cj"><b>${esc(c.name)}：</b><ol>${c.list.map(t => `<li>${esc(t).replace(/\n/g, "<br>")}</li>`).join("")}</ol></div>`).join("")}</td></tr>`).join("")}</tbody>
+        <td class="op">${anon ? (m => m.length ? `<ol>${m.map(t => `<li>${esc(t).replace(/\n/g, "<br>")}</li>`).join("")}</ol>` : "")(mergedComments(r)) : r.cm.map(c => `<div class="cj"><b>${esc(c.name)}：</b><ol>${c.list.map(t => `<li>${esc(t).replace(/\n/g, "<br>")}</li>`).join("")}</ol></div>`).join("")}</td></tr>`).join("")}</tbody>
     </table>
     ${sd.cat.note ? `<p class="s-note">備註：${esc(sd.cat.note)}</p>` : ""}
     <p class="small">※ 平均為${catScorers(sd.cat).length ? "評分委員" : "已評分委員"}之算術平均（取至小數第二位）；${sd.manual ? "名次及等第依評審會議決議。" : "名次依平均由高至低排列，同分同名次；尚未評分者不列名次。"}</p>
     ${withSign && sd.js.length ? `<div class="s-signs"><p>評審委員簽名：</p><div class="sg-grid">${sd.js.map(j => `<div class="sg"><span>${esc(j.name)}</span><span class="sg-box">${j.signature ? `<img src="${j.signature}" alt="">` : ""}</span></div>`).join("")}</div></div>` : ""}
   </div>`;
 }
-const summaryFileName = (sd, ext) => safeName(`${yearTag()}閱讀評選_${sd.cat.name}_評分總表`) + "." + ext;
+const summaryFileName = (sd, ext, anon) => safeName(`${yearTag()}閱讀評選_${sd.cat.name}_評分總表${anon ? "_匿名版" : ""}`) + "." + ext;
 
 /* ---------- Word ---------- */
 function docxKit() {
@@ -2493,14 +2603,15 @@ function docxKit() {
 }
 async function judgeDocx(d, sig, signs) {
   const k = docxKit(), { D, run, para, C, cell } = k;
-  const dbl = d.cat.layout === "double", ws = d.withScore !== false, W = (ws ? COLW : COLW_NS)[dbl ? "double" : "single"], rsp = ws ? { rowSpan: 2 } : {};
+  const dbl = d.cat.layout === "double", ws = d.withScore !== false, { W, cw, n: nS } = sheetCols(dbl, ws), rsp = ws ? { rowSpan: 2 } : {};
+  const scO = { margins: { top: 50, bottom: 50, left: 20, right: 20 } }, scZ = nS > 7 ? { size: 20 } : {};
   const heads = dbl ? ["編號", d.cat.col1Label || "機關學校", d.cat.col2Label || "團體名稱"] : ["編號", d.cat.col1Label || "學校"];
   const rows = [
-    new D.TableRow({ tableHeader: true, children: [...heads.map((t, i) => cell([para(run(t), C)], W[i], rsp)), ...(ws ? [cell([para(run("評分"), C)], 2800, { columnSpan: 5 })] : []), cell([para(run("審查意見"), C)], W.at(-1), rsp)] }),
-    ...(ws ? [new D.TableRow({ tableHeader: true, children: [5, 4, 3, 2, 1].map(v => cell([para(run(String(v)), C)], 560)) })] : []),
+    new D.TableRow({ tableHeader: true, children: [...heads.map((t, i) => cell([para(run(t), C)], W[i], rsp)), ...(ws ? [cell([para(run("評分"), C)], cw * nS, { columnSpan: nS })] : []), cell([para(run("審查意見"), C)], W.at(-1), rsp)] }),
+    ...(ws ? [new D.TableRow({ tableHeader: true, children: scaleList().map(v => cell([para(run(String(v), scZ), C)], cw, scO)) })] : []),
     ...d.rows.map(r => new D.TableRow({ cantSplit: true, children: [
       cell([para(run(r.e.code), C)], W[0]), cell([para(run(r.e.org), C)], W[1]), ...(dbl ? [cell([para(run(r.e.name || ""), C)], W[2])] : []),
-      ...(ws ? [5, 4, 3, 2, 1].map(v => cell([para(run(r.score === v ? "■" : ""), C)], 560)) : []),
+      ...(ws ? scaleList().map(v => cell([para(run(r.score === v ? "■" : "", scZ), C)], cw, scO)) : []),
       cell(r.comments.length ? k.numbered(r.comments) : [para(run(""))], W.at(-1), { verticalAlign: D.VerticalAlign.TOP })] }))
   ];
   const B5 = t => run(t, { bold: true });
@@ -2509,8 +2620,8 @@ async function judgeDocx(d, sig, signs) {
     styles: { default: { document: { run: { font: k.FONT, size: 24 } } } },
     sections: [{ properties: { page: { size: { width: 11906, height: 16838 }, margin: { top: 720, right: 720, bottom: 720, left: 720 } } }, children: [
       para(run(`【${d.cat.name}】`), C),
-      ...(ws ? [para(run("※ 請評審委員參酌審查指標，依照送審文件內容給予5~1分之評分：")),
-      para([run("※ "), B5("5"), run("分代表優良出眾；"), B5("4"), run("分代表良好；"), B5("3"), run("分代表符合標準；"), B5("2"), run("分代表尚可；"), B5("1"), run("分代表不符標準。")])]
+      ...(ws ? [para(run(`※ 請評審委員參酌審查指標，依照送審文件內容給予${nS}~1分之評分：`)),
+      para([run("※ "), ...scaleGroups().flatMap((g, i, a) => [B5(g.hi === g.lo ? String(g.hi) : `${g.hi}～${g.lo}`), run(`分代表${g.label}${i === a.length - 1 ? "。" : "；"}`)])])]
       : [para(run("※ 請評審委員參酌審查指標，依照送審文件內容填寫審查意見（本類別由指定委員評分）。"))]),
       new D.Table({ rows, width: { size: W.reduce((a, b) => a + b, 0), type: D.WidthType.DXA }, columnWidths: W, layout: D.TableLayoutType.FIXED }),
       ...(d.cat.note ? [para(run(`備註：${d.cat.note}`), { spacing: { before: 120 } })] : []),
@@ -2519,7 +2630,8 @@ async function judgeDocx(d, sig, signs) {
     ] }]
   });
 }
-async function summaryDocx(sd, showScores, withSign) {
+async function summaryDocx(sd, showScores, withSign, anon) {
+  if (anon) { showScores = false; withSign = false; }
   const k = docxKit(), { D, run, para, C, cell } = k, SZ = 22, r = (t, o = {}) => run(t, { size: SZ, ...o });
   const dbl = sd.cat.layout === "double", n = showScores ? sd.sj.length : 0, W = summaryCols(sd, showScores), two = n > 0, aw = hasAward(sd);
   const rsp = two ? { rowSpan: 2 } : {};
@@ -2535,7 +2647,7 @@ async function summaryDocx(sd, showScores, withSign) {
     ...(two ? row.sc.map((x, i) => cell([para(r(x ? String(x) : ""), C)], W[off + i])) : []),
     cell([para(r(fmtAvg(row.avg), { bold: true }), C)], W[off + n]), cell([para(r(String((sd.manual ? row.final : row.rank) || "")), C)], W[off + n + 1]),
     ...(aw ? [cell([para(r(row.award, { bold: true }), C)], W[off + n + 2])] : []),
-    cell(row.cm.length ? row.cm.flatMap(c => [para(r(`${c.name}：`, { bold: true }), { spacing: { before: 40 } }), ...k.numbered(c.list, SZ)]) : [para(r(""))], W.at(-1), { verticalAlign: D.VerticalAlign.TOP })
+    cell(anon ? (m => m.length ? k.numbered(m, SZ) : [para(r(""))])(mergedComments(row)) : row.cm.length ? row.cm.flatMap(c => [para(r(`${c.name}：`, { bold: true }), { spacing: { before: 40 } }), ...k.numbered(c.list, SZ)]) : [para(r(""))], W.at(-1), { verticalAlign: D.VerticalAlign.TOP })
   ] })));
   return new D.Document({
     creator: S.cfg?.title || DEFAULT_TITLE, title: `【${sd.cat.name}】評分總表`,
@@ -2543,7 +2655,7 @@ async function summaryDocx(sd, showScores, withSign) {
     sections: [{ properties: { page: { size: { width: 11906, height: 16838, orientation: D.PageOrientation.LANDSCAPE }, margin: { top: 720, right: 720, bottom: 720, left: 720 } } }, children: [
       para(run(S.cfg?.title || DEFAULT_TITLE, { size: 28, bold: true }), C),
       para(run(`【${sd.cat.name}】評分總表`, { bold: true }), C),
-      para(r(`評審委員：${sd.js.map(j => j.name).join("、") || "—"}（共 ${sd.js.length} 位）　　製表時間：${fmtDT(Date.now())}`)),
+      para(r(`${anon ? "" : `評審委員：${sd.js.map(j => j.name).join("、") || "—"}（共 ${sd.js.length} 位）　　`}製表時間：${fmtDT(Date.now())}`)),
       new D.Table({ rows, width: { size: W.reduce((a, b) => a + b, 0), type: D.WidthType.DXA }, columnWidths: W, layout: D.TableLayoutType.FIXED }),
       ...(sd.cat.note ? [para(r(`備註：${sd.cat.note}`), { spacing: { before: 120 } })] : []),
       para(r(`※ 平均為${catScorers(sd.cat).length ? "評分委員" : "已評分委員"}之算術平均（取至小數第二位）；${sd.manual ? "名次及等第依評審會議決議。" : "名次依平均由高至低排列，同分同名次；尚未評分者不列名次。"}`, { size: 20 })),
@@ -2611,27 +2723,28 @@ function zipModal(defaultCat) {
       <label class="check"><input type="checkbox" id="zW" checked>各委員評分表（Word）</label>
       <label class="check"><input type="checkbox" id="zP">各委員評分表（PDF，檔案較多時需時較久）</label>
       <label class="check"><input type="checkbox" id="zS" checked>評分總表（Word＋PDF＋CSV）及評定結果</label>
+      <label class="check"><input type="checkbox" id="zA">另附匿名版評分總表（Word＋PDF，不含委員姓名與個別分數，送教育局用）</label>
       <label class="check"><input type="checkbox" id="zG" checked>放入已儲存的電子簽名</label></fieldset>
     <p class="small muted" id="zEst" style="margin:0"></p>`,
     onMount: ov => {
       const est = () => {
         const ids = $("input[name=zr]:checked", ov).value === "all" ? cats.map(c => c.id) : [defaultCat];
         const nj = ids.reduce((a, id) => a + (summaryData(id)?.js.length || 0), 0);
-        const n = nj * (($("#zW", ov).checked ? 1 : 0) + ($("#zP", ov).checked ? 1 : 0)) + ids.length * ($("#zS", ov).checked ? 3 : 0);
+        const n = nj * (($("#zW", ov).checked ? 1 : 0) + ($("#zP", ov).checked ? 1 : 0)) + ids.length * (($("#zS", ov).checked ? 3 : 0) + ($("#zA", ov).checked ? 2 : 0));
         $("#zEst", ov).textContent = `預計產生 ${n} 個檔案，依類別分資料夾。`;
       };
       $$("input", ov).forEach(i => i.addEventListener("change", est)); est();
     },
     actions: [{ label: "取消" }, { label: `${I("dl", "sm")}開始打包下載`, kind: "primary", onClick: async ov => {
-      const o = { catIds: $("input[name=zr]:checked", ov).value === "all" ? cats.map(c => c.id) : [defaultCat], word: $("#zW", ov).checked, pdf: $("#zP", ov).checked, summary: $("#zS", ov).checked, sign: $("#zG", ov).checked };
-      if (!o.word && !o.pdf && !o.summary) { toast("請至少勾選一種內容", "error"); return false; }
+      const o = { catIds: $("input[name=zr]:checked", ov).value === "all" ? cats.map(c => c.id) : [defaultCat], word: $("#zW", ov).checked, pdf: $("#zP", ov).checked, summary: $("#zS", ov).checked, sign: $("#zG", ov).checked, anon: $("#zA", ov).checked };
+      if (!o.word && !o.pdf && !o.summary && !o.anon) { toast("請至少勾選一種內容", "error"); return false; }
       setTimeout(() => exportAllZip(o), 50);
     } }] });
 }
-async function exportAllZip({ catIds, word, pdf, summary, sign }) {
+async function exportAllZip({ catIds, word, pdf, summary, sign, anon }) {
   const done = busy("準備中…");
   try {
-    await Promise.all([loadScript(LIB.jszip), loadScript(LIB.docx), ...(pdf || summary ? [loadScript(LIB.html2pdf)] : [])]);
+    await Promise.all([loadScript(LIB.jszip), loadScript(LIB.docx), ...(pdf || summary || anon ? [loadScript(LIB.html2pdf)] : [])]);
     const zip = new window.JSZip(), P = window.docx.Packer;
     const jobs = [];
     catIds.forEach(cid => {
@@ -2643,6 +2756,10 @@ async function exportAllZip({ catIds, word, pdf, summary, sign }) {
         if (word) jobs.push([`${fn}.docx`, async () => { const { d, sig } = get(); return P.toBlob(await judgeDocx(d, sig)); }]);
         if (pdf) jobs.push([`${fn}.pdf`, async () => { const { d, sig } = get(); return makePdfBlob(sheetHTML(d, sig), false); }]);
       });
+      if (anon) {
+        jobs.push([`${dir}/00_評分總表_匿名版.docx`, async () => P.toBlob(await summaryDocx(sd, false, false, true))]);
+        jobs.push([`${dir}/00_評分總表_匿名版.pdf`, async () => makePdfBlob(summaryHTML(sd, false, false, true), true)]);
+      }
       if (summary) {
         jobs.push([`${dir}/00_評分總表.docx`, async () => P.toBlob(await summaryDocx(sd, true, sign))]);
         jobs.push([`${dir}/00_評分總表.pdf`, async () => makePdfBlob(summaryHTML(sd, true, sign), true)]);
@@ -2894,7 +3011,7 @@ Views.proxy = (el, { catId, judgeUid }) => {
     setHTML($("#pxB", el), catEntries(catId).map(e => {
       const sc = scoreOf(e.id, judgeUid), srec = S.scores.find(s => s.id === `${judgeUid}_${e.id}`), cms = commentsOf(e.id, judgeUid);
       return `<tr data-eid="${e.id}"><td><b>${esc(e.code)}</b></td><td>${esc(e.org)}</td>${dbl ? `<td>${esc(e.name)}</td>` : ""}
-        ${scorer ? `<td class="num"><span class="lvl-pick">${[5, 4, 3, 2, 1].map(v => `<button class="lv${sc === v ? " on" : ""}" data-px="lv" data-v="${v}" title="${v} 分・${scaleLabel(v)}">${v}</button>`).join("")}</span>
+        ${scorer ? `<td class="num"><span class="lvl-pick">${scaleList().map(v => `<button class="lv${sc === v ? " on" : ""}" data-px="lv" data-v="${v}" title="${v} 分・${scaleLabel(v)}">${v}</button>`).join("")}</span>
           ${sc ? `<button class="btn ghost sm" data-px="clr" title="清除評分">${I("x", "sm")}</button>` : ""}${srec?.editedBy ? `<div class="px-flag">${I("edit", "sm")}${esc(srec.editedBy)} 代修・${fmtDT(srec.editedAt)}</div>` : ""}</td>` : ""}
         <td><ol class="px-cm">${cms.map(c => `<li><span>${esc(c.text)}${c.editedBy ? ` <span class="px-flag inline">${I("edit", "sm")}代修</span>` : ""}</span>
           <span class="px-act"><button class="btn ghost icon sm" data-px="edit" data-cid="${c.id}" aria-label="修改">${I("edit", "sm")}</button><button class="btn ghost icon sm" data-px="del" data-cid="${c.id}" aria-label="刪除" style="color:var(--danger)">${I("trash", "sm")}</button></span></li>`).join("")}</ol>
@@ -2982,7 +3099,7 @@ Views.live = (el, { catId }) => {
     ol.innerHTML = m.list.map(r => `<li class="lv-row ${r.rank && r.rank <= 3 ? "top" + r.rank : ""} ${r.avg == null ? "none" : ""}" data-id="${r.e.id}">
       <span class="lv-rank">${r.rank || "—"}</span>
       <span class="lv-name"><small>${esc(r.e.code)}</small><b>${showName ? esc(r.e.org) + (dbl && r.e.name ? `<em>${esc(r.e.name)}</em>` : "") : "（名稱隱藏）"}${r.award ? awardBadge(m.sd.cat, r.award).replace('class="awd', 'class="awd lv') : ""}</b></span>
-      <span class="lv-bar"><i style="width:${m.scale ? (r.level || 0) * 20 : r.avg ? (r.avg / 5 * 100).toFixed(1) : 0}%"></i></span>
+      <span class="lv-bar"><i style="width:${m.scale ? (r.level || 0) / scaleMax() * 100 : r.avg ? (r.avg / scaleMax() * 100).toFixed(1) : 0}%"></i></span>
       <span class="lv-avg">${m.scale ? (r.level ? `${r.level}<small>${scaleLabel(r.level)}</small>` : "—") : `${r.avg != null ? r.avg.toFixed(2) : "—"}<small>${r.n ? `${r.n} 位` : "尚無"}</small>`}</span></li>`).join("") || `<li class="lv-empty">此類別尚無參賽資料</li>`;
     $$("[data-id]", ol).forEach(n => {
       const b = before[n.dataset.id]; if (!b) { n.animate?.([{ opacity: 0 }, { opacity: 1 }], { duration: 400 }); return; }
@@ -3006,7 +3123,7 @@ Views.live = (el, { catId }) => {
 };
 
 Views.summary = (el, { catId }) => {
-  let built = false, showScores = ls.get("rj_sum_scores", true), withSign = ls.get("rj_sum_sign", true);
+  let built = false, showScores = ls.get("rj_sum_scores", true), withSign = ls.get("rj_sum_sign", true), anon = ls.get("rj_sum_anon", false);
   const fit = () => fitPaper(el);
   function build() {
     el.innerHTML = topbarHTML() + `<main class="wrap">
@@ -3019,8 +3136,11 @@ Views.summary = (el, { catId }) => {
         <aside class="side">
           <section class="card"><h2>${I("users")}委員送出狀態</h2><ul class="stat-list" id="stat" style="margin-top:8px"></ul></section>
           <section class="card"><h2>${I("dl")}輸出總表</h2>
+            <div class="seg anon-seg" role="group" aria-label="輸出版本" id="anonSeg" style="margin-top:8px"><button data-an="0">完整版</button><button data-an="1">匿名版（送教育局）</button></div>
+            <p class="small muted" id="anonHint" style="margin:8px 0 0"></p>
+            <div id="fullOpts">
             <label class="check" style="margin-top:6px"><input type="checkbox" id="showSc" ${showScores ? "checked" : ""}>顯示各委員分數欄</label>
-            <label class="check"><input type="checkbox" id="withSg" ${withSign ? "checked" : ""}>加入評審委員簽名欄</label>
+            <label class="check"><input type="checkbox" id="withSg" ${withSign ? "checked" : ""}>加入評審委員簽名欄</label></div>
             <div style="display:flex;flex-direction:column;gap:10px;margin-top:10px">
               <button class="btn primary lg" id="xDocx">${I("file")}下載 Word（.docx）</button>
               <button class="btn lg" id="xPdf">${I("dl")}下載 PDF</button>
@@ -3032,16 +3152,19 @@ Views.summary = (el, { catId }) => {
     $("#catSel", el).onchange = ev => nav(`#/summary/${ev.target.value}`);
     $("#showSc", el).onchange = ev => { showScores = ev.target.checked; ls.set("rj_sum_scores", showScores); render(); };
     $("#withSg", el).onchange = ev => { withSign = ev.target.checked; ls.set("rj_sum_sign", withSign); render(); };
-    $("#xDocx", el).onclick = () => { const sd = summaryData(catId); saveDocx(() => summaryDocx(sd, showScores, withSign), summaryFileName(sd, "docx")); };
-    $("#xPdf", el).onclick = () => { const sd = summaryData(catId); savePdf(summaryHTML(sd, showScores, withSign), summaryFileName(sd, "pdf"), true); };
-    $("#xPrint", el).onclick = () => { const sd = summaryData(catId); printHTML(summaryHTML(sd, showScores, withSign), summaryFileName(sd, "pdf").replace(/\.pdf$/, ""), true); };
-    $("#xCsv", el).onclick = () => exportSummaryCsv(summaryData(catId));
-    $("#pvBig", el).onclick = () => previewOverlay(summaryHTML(summaryData(catId), showScores, withSign), true);
+    $("#anonSeg", el).onclick = ev => { const b = ev.target.closest("[data-an]"); if (!b) return; anon = b.dataset.an === "1"; ls.set("rj_sum_anon", anon); render(); };
+    $("#xDocx", el).onclick = () => { const sd = summaryData(catId); saveDocx(() => summaryDocx(sd, showScores, withSign, anon), summaryFileName(sd, "docx", anon)); };
+    $("#xPdf", el).onclick = () => { const sd = summaryData(catId); savePdf(summaryHTML(sd, showScores, withSign, anon), summaryFileName(sd, "pdf", anon), true); };
+    $("#xPrint", el).onclick = () => { const sd = summaryData(catId); printHTML(summaryHTML(sd, showScores, withSign, anon), summaryFileName(sd, "pdf", anon).replace(/\.pdf$/, ""), true); };
+    $("#xCsv", el).onclick = () => exportSummaryCsv(summaryData(catId), anon);
+    $("#pvBig", el).onclick = () => previewOverlay(summaryHTML(summaryData(catId), showScores, withSign, anon), true);
     addEventListener("resize", fit);
   }
   function render() {
     const sd = summaryData(catId); if (!sd) return;
-    setHTML($("#paper", el), `<style>${SHEET_CSS}</style>` + summaryHTML(sd, showScores, withSign)); fit();
+    setHTML($("#paper", el), `<style>${SHEET_CSS}</style>` + summaryHTML(sd, showScores, withSign, anon)); fit();
+    $$("#anonSeg [data-an]", el).forEach(b => b.setAttribute("aria-pressed", (b.dataset.an === "1") === anon)); $("#fullOpts", el).hidden = anon;
+    $("#anonHint", el).textContent = anon ? "不含委員姓名、各委員分數與簽名欄；只保留平均、名次、等第，審查意見綜整為一份（相同的意見只列一次）。" : "含委員姓名與各委員的審查意見，供內部留存。";
     setHTML($("#stat", el), sd.js.map(j => { const n = sd.rows.filter(r => doneOf(r.e.id, sd.cat.id, j.id)).length, sub = isSubmitted(sd.cat.id, j.id);
       return `<li><span>${esc(j.name)}</span><span>${n} / ${sd.rows.length} ${sub ? `<span class="badge ok">${I("lock", "sm")}已送出</span>` : `<span class="badge">未送出</span>`}</span></li>`; }).join("") || `<li class="muted">尚無委員</li>`);
   }
@@ -3054,14 +3177,17 @@ Views.summary = (el, { catId }) => {
     unmount() { removeEventListener("resize", fit); }
   };
 };
-function summaryCsv(sd) {
+function summaryCsv(sd, anon) {
   const dbl = sd.cat.layout === "double";
+  if (anon) return "﻿" + [["編號", sd.cat.col1Label || "學校", ...(dbl ? [sd.cat.col2Label] : []), "平均", "名次", "等第", "審查意見"],
+    ...sd.rows.map(r => [r.e.code, r.e.org, ...(dbl ? [r.e.name] : []), fmtAvg(r.avg), (sd.manual ? r.final : r.rank) || "", r.award || "", mergedComments(r).map((t, i) => `${i + 1}. ${t}`).join("\n")])]
+    .map(r => r.map(v => `"${String(v ?? "").replace(/"/g, '""')}"`).join(",")).join("\r\n");
   const head = ["編號", sd.cat.col1Label || "學校", ...(dbl ? [sd.cat.col2Label] : []), ...sd.sj.map(j => j.name), "總分", "平均", "依平均名次", "決議名次", "等第", "評分人數", "審查意見"];
   const rows = sd.rows.map(r => [r.e.code, r.e.org, ...(dbl ? [r.e.name] : []), ...r.sc.map(x => x ?? ""), r.n ? r.sum : "", fmtAvg(r.avg), r.rank || "", r.final || "", r.award || "", r.n,
     r.cm.map(c => `${c.name}：\n` + c.list.map((t, i) => `${i + 1}. ${t}`).join("\n")).join("\n\n")]);
   return "﻿" + [head, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\r\n");
 }
-function exportSummaryCsv(sd) { download(new Blob([summaryCsv(sd)], { type: "text/csv;charset=utf-8" }), summaryFileName(sd, "csv")); }
+function exportSummaryCsv(sd, anon) { download(new Blob([summaryCsv(sd, anon)], { type: "text/csv;charset=utf-8" }), summaryFileName(sd, "csv", anon)); }
 
 /* =====================================================================
    十二、管理後台
@@ -3137,6 +3263,15 @@ AdminTabs.settings = pane => {
       <div class="field"><span class="lbl">評分開關</span>
         <label class="switch"><input type="checkbox" id="io"><span class="track"></span><span id="ioL"></span></label>
         <span class="help">關閉時，即使在開放時間內也無法評分（可用於臨時暫停）</span></div>
+      <fieldset class="field fs-box scale-set"><legend class="lbl">評分等第</legend>
+        <div class="lk-row"><label class="lk-l" for="scN">等第數</label><select class="input" id="scN" style="width:auto">${[5, 6, 7, 8, 9, 10].map(n => `<option value="${n}">${n} 等第（${n}～1 分）</option>`).join("")}</select><span class="small muted" id="scWarn"></span></div>
+        <div class="lk-row" style="align-items:flex-start"><span class="lk-l" style="padding-top:8px">各分數說明</span><div class="sc-labels" id="scLb"></div></div>
+        <span class="help">等第越多，分數差距越容易拉開，平均同分的情形會減少。各分數的說明會顯示在評分按鈕與評分表的「※ 幾分代表…」；留白則使用預設說明。評分開始後請不要再變更等第數，已經打的分數不會自動換算。</span>
+      </fieldset>
+      <fieldset class="field fs-box"><legend class="lbl">同分提醒</legend>
+        <label class="check"><input type="checkbox" id="tieOn"><span>委員評分時，提醒哪些學校「平均同分、名次並列」</span></label>
+        <span class="help" style="display:block;margin:4px 0 8px;line-height:1.7">委員只會看到並列的學校與並列名次，看不到平均分數與其他委員的分數。需全部評分委員都評過的學校才會列入比對；並列名單由管理者開著本平台時自動更新（已開放委員互看時，委員端會自行計算）。</span>
+      </fieldset>
       <fieldset class="field fs-box look-set"><legend class="lbl">外觀</legend>
         <div class="lk-row"><span class="lk-l">主色</span><div class="swatches" role="radiogroup" aria-label="主色">${Object.entries(THEMES).map(([k, [n, c]]) => `<label class="sw"><input type="radio" name="th" value="${k}"><span style="background:${c}"></span><em>${n}</em></label>`).join("")}</div></div>
         <div class="lk-row"><span class="lk-l">單位標誌</span><div class="row"><span class="lk-logo" id="lgPrev"></span><button type="button" class="btn sm" id="lgUp">${I("up", "sm")}上傳圖片</button><button type="button" class="btn sm ghost" id="lgRm">移除</button><input type="file" id="lgFile" accept="image/*" hidden></div></div>
@@ -3153,6 +3288,15 @@ AdminTabs.settings = pane => {
         <span class="spacer"></span><span class="muted small" id="upd"></span></div>
     </form>`;
   const f = $("#sf", pane);
+  const scNv = () => +$("#scN", pane).value || 5;
+  /** 各分數說明的輸入欄：預設值依五級別帶入，可自行修改 */
+  function drawScLabels(keep) {
+    const n = scNv(), old = keep ? Object.fromEntries($$("#scLb input", pane).map(i => [i.dataset.v, i.value])) : {}, saved = n === scaleMax() ? (S.cfg?.scaleLabels || []) : [];
+    $("#scLb", pane).innerHTML = scaleList(n).map(v => `<label class="sc-lb"><span class="pill s s${sb(v, n)}">${v}</span><input class="input sm" data-v="${v}" maxlength="12" placeholder="${bandLabel(sb(v, n))}" value="${esc(old[v] ?? saved[v - 1] ?? "")}" aria-label="${v} 分的說明"></label>`).join("");
+    const mx = S.scores.reduce((a, x) => Math.max(a, x.score || 0), 0);
+    $("#scWarn", pane).textContent = n !== scaleMax() && S.scores.length ? `目前已有 ${S.scores.length} 筆評分（最高 ${mx} 分），變更後不會自動換算。` : "";
+  }
+  $("#scN", pane).onchange = () => drawScLabels(false);
   let logoVal = "";
   const thVal = () => $("input[name=th]:checked", pane)?.value || "teal";
   const preview = () => { S.lookPreview = true; applyTheme(thVal(), logoVal); const pv = $("#lgPrev", pane); pv.innerHTML = logoHTML(logoVal); pv.classList.toggle("has-img", !!logoVal); $("#lgRm", pane).hidden = !logoVal; };
@@ -3177,9 +3321,12 @@ AdminTabs.settings = pane => {
     if (ca <= oa) return toast("截止時間必須晚於開放時間", "error");
     const base = { ...(S.cfg || {}) }; delete base.id;
     const d = { ...base, title: $("#t1", pane).value.trim() || DEFAULT_TITLE, shortTitle: $("#t3", pane).value.trim(), subtitle: $("#t2", pane).value.trim(), openAt: oa, closeAt: ca,
-      isOpen: $("#io", pane).checked, peerView: $("input[name=pv]:checked", pane)?.value || "off", theme: thVal(), logo: logoVal, updatedAt: Date.now() };
+      isOpen: $("#io", pane).checked, peerView: $("input[name=pv]:checked", pane)?.value || "off", theme: thVal(), logo: logoVal, scaleMax: scNv(), scaleLabels: scaleList(scNv()).reverse().map(v => ($(`#scLb input[data-v="${v}"]`, pane)?.value || "").trim()), tieHint: $("#tieOn", pane).checked, updatedAt: Date.now() };
+    { const mx = S.scores.reduce((a, x) => Math.max(a, x.score || 0), 0), oldN = scaleMax();
+      if (d.scaleMax < mx) return toast(`目前已有 ${mx} 分的評分，等第數不能低於 ${mx}`, "error");
+      if (d.scaleMax !== oldN && S.scores.length && !await confirmDialog(`目前已有 ${S.scores.length} 筆評分。\n將等第數由 ${oldN} 改為 ${d.scaleMax} 後，已經打的分數不會自動換算（例如原本的 4 分仍是 4 分）。\n\n確定要變更嗎？`, { title: "變更評分等第", ok: "確定變更", danger: true })) return; }
     const pvOld = peerMode(), thOld = THEMES[S.cfg?.theme] ? S.cfg.theme : "teal";
-    const notes = [d.title !== S.cfg?.title ? "平台名稱：" + d.title : "", d.peerView !== pvOld ? `委員互看：${PEER_LABEL[pvOld]} → ${PEER_LABEL[d.peerView]}` : "", d.theme !== thOld ? `主色：${THEMES[thOld][0]} → ${THEMES[d.theme][0]}` : "", d.logo !== (S.cfg?.logo || "") ? (d.logo ? "更換單位標誌" : "移除單位標誌") : ""].filter(Boolean).join("；");
+    const notes = [d.title !== S.cfg?.title ? "平台名稱：" + d.title : "", d.peerView !== pvOld ? `委員互看：${PEER_LABEL[pvOld]} → ${PEER_LABEL[d.peerView]}` : "", d.theme !== thOld ? `主色：${THEMES[thOld][0]} → ${THEMES[d.theme][0]}` : "", d.logo !== (S.cfg?.logo || "") ? (d.logo ? "更換單位標誌" : "移除單位標誌") : "", d.scaleMax !== scaleMax() ? `評分等第：${scaleMax()} → ${d.scaleMax} 等第` : "", d.tieHint !== (S.cfg?.tieHint !== false) ? `同分提醒：${d.tieHint ? "開啟" : "關閉"}` : ""].filter(Boolean).join("；");
     S.lookPreview = null;
     try { await W(B.batch([{ op: "set", c: "config", id: "main", d }, { op: "set", c: "config", id: "public", d: { title: d.title, subtitle: d.subtitle, theme: d.theme, logo: d.logo } },
       auditOp("config", { from: S.cfg ? `${fmtDT(S.cfg.openAt)}～${fmtDT(S.cfg.closeAt)}・${S.cfg.isOpen ? "開啟" : "關閉"}` : "", to: `${fmtDT(oa)}～${fmtDT(ca)}・${d.isOpen ? "開啟" : "關閉"}`, detail: notes })]), "設定已儲存"); } catch {}
@@ -3195,6 +3342,7 @@ AdminTabs.settings = pane => {
     $("#io", pane).checked = !!c.isOpen; $("#ioL", pane).textContent = c.isOpen ? "開啟" : "關閉";
     $(`input[name=pv][value="${peerMode()}"]`, pane).checked = true;
     $(`input[name=th][value="${THEMES[c.theme] ? c.theme : "teal"}"]`, pane).checked = true; logoVal = c.logo || "";
+    $("#scN", pane).value = String(scaleMax()); drawScLabels(false); $("#tieOn", pane).checked = c.tieHint !== false;
     { const pv = $("#lgPrev", pane); pv.innerHTML = logoHTML(logoVal); pv.classList.toggle("has-img", !!logoVal); $("#lgRm", pane).hidden = !logoVal; }
     $("#upd", pane).textContent = c.updatedAt ? "上次更新：" + fmtDT(c.updatedAt) : "";
   }, unmount() { S.lookPreview = null; syncLook(); } };
@@ -3296,7 +3444,7 @@ AdminTabs.cats = pane => {
       <div class="grid2"><div class="field"><label for="c1">第一欄標題</label><input class="input" id="c1" value="${esc(c.col1Label)}"></div>
         <div class="field" id="c2w"><label for="c2">第二欄標題</label><input class="input" id="c2" value="${esc(c.col2Label)}" placeholder="團體名稱／姓名"></div></div>
       <fieldset class="field fs-box"><legend class="lbl">評分分工</legend>
-        <label class="check"><input type="radio" name="sm" value="all" ${!sc.length ? "checked" : ""}>所有委員都要評分（1～5 分）並填寫意見</label>
+        <label class="check"><input type="radio" name="sm" value="all" ${!sc.length ? "checked" : ""}>所有委員都要評分（1～${scaleMax()} 分）並填寫意見</label>
         <label class="check"><input type="radio" name="sm" value="pick" ${sc.length ? "checked" : ""}>指定評分委員：只有勾選的委員點選分數，其餘委員只寫審查意見</label>
         <div class="pick-list" id="spick">${pool.length ? pool.map(j => `<label class="check"><input type="checkbox" class="spk" value="${j.id}" ${sc.includes(j.id) ? "checked" : ""}>${esc(j.name)}<span class="muted small">（${esc(j.username)}）</span></label>`).join("") : `<p class="small muted" style="margin:4px 0">尚無可評此類別的委員，請先到「委員帳號」建立。</p>`}</div>
       </fieldset>
@@ -3933,7 +4081,7 @@ AdminTabs.results = pane => {
   function autoCols(n, kind) {
     if (dens !== "fit" || n < 8) return 1;
     const sd = summaryData(sel), nj = sd?.sj.length || 2, fd = kind === "final" ? finalData(sel) : null;
-    minW.sum = 250 + nj * 42 + 150; minW.final = 330 + (fd && fd.display !== "avg" ? (fd.display === "level" ? 150 : 80) : 0);
+    minW.sum = 250 + nj * 42 + 150; minW.final = 330 + (fd && fd.display !== "avg" ? (fd.display === "level" ? Math.max(150, scaleMax() * 30) : 80) : 0);
     const top = Math.max(0, rv.getBoundingClientRect().top), avail = Math.max(240, innerHeight - top - (kind === "final" ? 240 : 120));
     const W = rv.clientWidth - 24, H = 34; let best = 1, bz = 0;
     for (let k = 1; k <= 5; k++) { const z = Math.min(1, W / (k * minW[kind] + (k - 1) * 14), avail / (Math.ceil(n / k) * rowH[kind] + H)); if (z > bz + 0.02) { bz = z; best = k; } }
@@ -3970,7 +4118,7 @@ AdminTabs.results = pane => {
         ${sd.sj.map(j => `<th class="num">${esc(j.name)}</th>`).join("")}<th class="num">平均</th><th class="num">${sd.manual ? "決議名次" : "名次"}</th>${hasAw ? `<th class="num">等第</th>` : ""}<th class="num">差距</th><th class="num">意見</th></tr>`,
         sd.rows.length ? sd.rows.map(r => { const v = r.sc.filter(x => x), g = v.length > 1 ? Math.max(...v) - Math.min(...v) : null;
           return `<tr data-row><td><b>${esc(r.e.code)}</b></td><td>${esc(r.e.org)}</td>${dbl ? `<td>${esc(r.e.name)}</td>` : ""}
-          ${r.sc.map(x => `<td class="num">${x ? `<span class="pill s s${x}">${x}</span>` : '<span class="muted">—</span>'}</td>`).join("")}
+          ${r.sc.map(x => `<td class="num">${x ? `<span class="pill s s${sb(x)}">${x}</span>` : '<span class="muted">—</span>'}</td>`).join("")}
           <td class="num"><b>${r.avg != null ? fmtAvg(r.avg) : "—"}</b></td><td class="num">${(sd.manual ? r.final : r.rank) || "—"}</td>${hasAw ? `<td class="num">${r.award ? awardBadge(sd.cat, r.award) : "—"}</td>` : ""}
           <td class="num">${g == null ? '<span class="muted">—</span>' : g >= 2 ? `<span class="badge gap-badge" title="委員評分差距較大，建議討論">${I("alert", "sm")}${g}</span>` : g}</td>
           <td class="num">${r.cm.reduce((a, c) => a + c.list.length, 0)}</td></tr>`; }) : [`<tr><td colspan="10" class="empty">此類別尚無參賽資料</td></tr>`], fitCols(sd.rows.length, "sum"))}</div>`);
@@ -3984,13 +4132,13 @@ AdminTabs.results = pane => {
     const tn = st.reduce((a, x) => a + x.n, 0), gm = tn ? st.reduce((a, x) => a + (x.m || 0) * x.n, 0) / tn : null, span = 3 + (dbl ? 1 : 0);
     setHTML(rv, `<div class="card-h"><div><h2>委員 × ${esc(sd.cat.col1Label || "學校")}熱度圖</h2><p class="sub" style="margin:2px 0 0">顏色越深分數越高。同一列顏色落差大，代表委員看法不同；差距 ≥ 2 分時，以粗框標出該列的最高分與最低分。</p></div>
       <div class="row"><div class="seg" role="group" aria-label="排序">${[["rank", "依名次"], ["code", "依編號"]].map(([k, l]) => `<button data-hs="${k}" aria-pressed="${k === heatSort}">${l}</button>`).join("")}</div></div></div>
-      <div class="hm-legend" aria-hidden="true"><span>圖例</span>${[1, 2, 3, 4, 5].map(v => `<span class="hm-k"><i class="hm h${v}">${v}</i>${scaleLabel(v)}</span>`).join("")}<span class="hm-k"><i class="hm h0">·</i>未評</span><span class="hm-k"><i class="hm h5 hx">5</i>差距 ≥ 2 的最高／最低</span></div>
+      <div class="hm-legend" aria-hidden="true"><span>圖例</span>${scaleList().reverse().map(v => `<span class="hm-k"><i class="hm" ${hmStyle(v)}>${v}</i>${scaleMax() > 5 ? "" : esc(scaleLabel(v))}</span>`).join("")}<span class="hm-k"><i class="hm h0">·</i>未評</span><span class="hm-k"><i class="hm hx" ${hmStyle(scaleMax())}>${scaleMax()}</i>差距 ≥ 2 的最高／最低</span></div>
       <div class="tbl-wrap scroll"><table class="tbl dense heat"><thead><tr><th class="num">名次</th><th>編號</th><th>${esc(sd.cat.col1Label || "學校")}</th>${dbl ? `<th>${esc(sd.cat.col2Label || "")}</th>` : ""}
         ${sd.sj.map(j => `<th class="num hm-h">${esc(j.name)}</th>`).join("")}<th class="hm-avg">平均</th><th class="num">差距</th></tr></thead><tbody>
         ${rows.length ? rows.map(r => { const v = r.sc.filter(Boolean), mx = Math.max(...v), mn = Math.min(...v), g = v.length > 1 ? mx - mn : null, pos = r.pos ?? (r.avg != null ? r.rank : null);
           return `<tr><td class="num">${pos || '<span class="muted">—</span>'}</td><td class="nowrap"><b>${esc(r.e.code)}</b></td><td>${esc(r.e.org)}</td>${dbl ? `<td>${esc(r.e.name || "")}</td>` : ""}
-            ${r.sc.map((x, i) => `<td class="hm h${x || 0}${g >= 2 && (x === mx || x === mn) ? " hx" : ""}" title="${esc(sd.sj[i].name)}：${x ? `${x} 分・${scaleLabel(x)}` : "未評"}">${x || "·"}</td>`).join("")}
-            <td class="hm-avg">${r.avg != null ? `<span class="hbar"><i style="width:${r.avg / 5 * 100}%"></i></span><b>${fmtAvg(r.avg)}</b>` : '<span class="muted">—</span>'}</td>
+            ${r.sc.map((x, i) => `<td class="hm ${x ? "" : "h0"}${g >= 2 && (x === mx || x === mn) ? " hx" : ""}" ${hmStyle(x)} title="${esc(sd.sj[i].name)}：${x ? `${x} 分・${scaleLabel(x)}` : "未評"}">${x || "·"}</td>`).join("")}
+            <td class="hm-avg">${r.avg != null ? `<span class="hbar"><i style="width:${r.avg / scaleMax() * 100}%"></i></span><b>${fmtAvg(r.avg)}</b>` : '<span class="muted">—</span>'}</td>
             <td class="num">${g == null ? '<span class="muted">—</span>' : g >= 2 ? `<span class="badge gap-badge">${I("alert", "sm")}${g}</span>` : g}</td></tr>`; }).join("") : `<tr><td colspan="${span + sd.sj.length + 2}" class="empty">此類別尚無參賽資料</td></tr>`}</tbody>
         ${sd.sj.length && tn ? `<tfoot><tr><th colspan="${span}" style="text-align:right">各委員平均給分</th>${st.map(x => `<td class="num"><b>${x.m != null ? fmtAvg(x.m) : "—"}</b><small>${x.n} 件</small></td>`).join("")}<td class="hm-avg"><b>${gm != null ? fmtAvg(gm) : "—"}</b> <small>全體</small></td><td></td></tr></tfoot>` : ""}</table></div>`);
   }
@@ -4018,11 +4166,11 @@ AdminTabs.results = pane => {
         <button class="btn sm" data-r="clear" ${dis}>清除等第</button>
       </div>
       <div class="tbl-wrap scroll">${splitTable(`tbl dense ftbl ${lk ? "locked" : ""}`, `<tr><th class="c-drag" style="width:34px"></th><th class="num" style="width:58px">名次</th><th>編號</th><th>${esc(sd.cat.col1Label || "學校")}</th>${dbl ? `<th>${esc(sd.cat.col2Label)}</th>` : ""}
-        <th class="num">平均</th>${scale ? `<th class="num" style="width:${fd.display === "level" ? 190 : 110}px">${fd.display === "level" ? "決議等級（5～1）" : "五點量表"}</th>` : ""}<th class="num c-js">各委員</th><th style="width:150px">等第</th><th class="c-note">備註</th><th class="num c-adj" style="width:96px">調整</th></tr>`,
+        <th class="num">平均</th>${scale ? `<th class="num" style="width:${fd.display === "level" ? Math.max(190, scaleMax() * 33 + 14) : 110}px">${fd.display === "level" ? `決議等級（${scaleMax()}～1）` : `${NUM_ZH[scaleMax()]}點量表`}</th>` : ""}<th class="num c-js">各委員</th><th style="width:150px">等第</th><th class="c-note">備註</th><th class="num c-adj" style="width:96px">調整</th></tr>`,
         fd.list.length ? fd.list.map((r, i) => `<tr data-row data-eid="${r.e.id}" draggable="${!lk && !!r.pos}" class="${r.award ? "aw" + (aw.findIndex(x => x.name === r.award) + 1) : ""}${r.pos ? "" : " unrated"}${r.pos && qAt[r.pos] ? " qline" : ""}">
           <td class="drag" title="${lk ? "已鎖定" : r.pos ? "拖曳調整名次" : "尚未評分"}" aria-hidden="true">${lk ? I("lock", "sm") : r.pos ? "⋮⋮" : ""}</td><td class="num c-pos">${r.pos ? `<span class="fpos">${r.pos}</span>` : `<span class="fpos none" title="尚未評分，不列名次">—</span>`}${qTag(r, i)}</td><td><b>${esc(r.e.code)}</b></td><td>${esc(r.e.org)}</td>${dbl ? `<td>${esc(r.e.name)}</td>` : ""}
           <td class="num"><b>${r.avg != null ? fmtAvg(r.avg) : "—"}</b>${i && fd.list[i - 1].avg != null && r.avg != null && Math.abs(fd.list[i - 1].avg - r.avg) < 1e-9 ? '<span class="badge" title="與上一名平均相同" style="margin-left:4px">同分</span>' : ""}</td>
-          ${scale ? `<td class="num">${fd.display === "level" ? `<span class="lvl-pick" role="radiogroup" aria-label="${esc(r.e.org)} 決議等級">${[5, 4, 3, 2, 1].map(v => `<button class="lv${r.level === v ? " on" : ""}${r.level === v && !r.levelSet ? " auto" : ""}" data-r="lvl" data-v="${v}" role="radio" aria-checked="${r.level === v}" ${dis} title="${v} 分・${scaleLabel(v)}${r.level === v && !r.levelSet ? "（依平均換算，尚未決議）" : ""}">${v}</button>`).join("")}</span>`
+          ${scale ? `<td class="num">${fd.display === "level" ? `<span class="lvl-pick" role="radiogroup" aria-label="${esc(r.e.org)} 決議等級">${scaleList().map(v => `<button class="lv${r.level === v ? " on" : ""}${r.level === v && !r.levelSet ? " auto" : ""}" data-r="lvl" data-v="${v}" role="radio" aria-checked="${r.level === v}" ${dis} title="${v} 分・${scaleLabel(v)}${r.level === v && !r.levelSet ? "（依平均換算，尚未決議）" : ""}">${v}</button>`).join("")}</span>`
             : `<span class="lv-show">${r.level ? `■ ${r.level}　<small>${scaleLabel(r.level)}</small>` : "—"}</span>`}</td>` : ""}
           <td class="num small c-js">${r.sc.map(x => x || "–").join("・")}</td>
           <td><select class="input sm fawd" data-eid="${r.e.id}" aria-label="${esc(r.e.org)} 等第" ${dis}><option value="">—</option>${aw.map(x => `<option ${x.name === r.award ? "selected" : ""}>${esc(x.name)}</option>`).join("")}${r.award && !aw.some(x => x.name === r.award) ? `<option selected>${esc(r.award)}</option>` : ""}</select></td>
@@ -4058,14 +4206,14 @@ AdminTabs.results = pane => {
   function outModal(fd) {
     openModal({ title: "輸出評定結果", wide: true, body: `
       <fieldset class="field" style="border:0;padding:0;margin:0 0 12px"><legend class="lbl" style="font-weight:500;margin-bottom:6px">文件</legend>
-        <label class="check"><input type="radio" name="od" value="final" checked>評定結果表：名次、${fd.display === "avg" ? "平均分數" : "五點量表 ■"}、等第、備註，附評審委員簽名欄</label>
+        <label class="check"><input type="radio" name="od" value="final" checked>評定結果表：名次、${fd.display === "avg" ? "平均分數" : `${NUM_ZH[scaleMax()]}點量表 ■`}、等第、備註，附評審委員簽名欄</label>
         <label class="check"><input type="radio" name="od" value="cons">綜合評分表（同 115 年度評分表格式）：一校一列、■ 標示${fd.display === "level" ? "決議等級" : "等級（依平均換算）"}、合併全體委員審查意見</label></fieldset>
       <div id="oCons" class="fs-box" hidden>
         <label class="check"><input type="radio" name="oo" value="code" checked>依編號排列（同歷年格式）</label>
         <label class="check"><input type="radio" name="oo" value="rank">依名次排列</label>
         <label class="check"><input type="checkbox" id="oLbl">審查意見後標註委員姓名</label>
         <label class="check"><input type="checkbox" id="oSg" checked>附全體評審委員簽名欄</label></div>
-      <p class="small muted" style="margin:0">${fd.display === "avg" ? "目前呈現方式為「平均分數」；綜合評分表會將平均四捨五入換算為五點量表。" : DISPLAY[fd.display]}</p>`,
+      <p class="small muted" style="margin:0">${fd.display === "avg" ? "目前呈現方式為「平均分數」；綜合評分表會將平均四捨五入換算為${NUM_ZH[scaleMax()]}點量表。" : DISPLAY[fd.display]}</p>`,
       onMount: ov => $$("input[name=od]", ov).forEach(r => r.onchange = () => $("#oCons", ov).hidden = $("input[name=od]:checked", ov).value !== "cons"),
       actions: [{ label: "取消" }, ...[["word", "Word"], ["pdf", "PDF"], ["print", "列印"]].map(([k, l], i) => ({ label: l, kind: i === 0 ? "primary" : "", onClick: ov => {
         const f2 = finalData(sel), doc = $("input[name=od]:checked", ov).value;
@@ -4169,8 +4317,8 @@ function finalData(catId) {
   }) };
 }
 /** 平均分數換算五點量表（四捨五入：4.5 以上為 5） */
-const lvlOf = avg => avg == null ? null : Math.min(5, Math.max(1, Math.floor(avg + 0.5)));
-const DISPLAY = { avg: "平均分數", auto: "五點量表（依平均四捨五入）", level: "五點量表（會議決議等級）" };
+const lvlOf = avg => avg == null ? null : Math.min(scaleMax(), Math.max(1, Math.floor(avg + 0.5)));
+const DISPLAY = { avg: "平均分數", get auto() { return `${NUM_ZH[scaleMax()]}點量表（依平均四捨五入）`; }, get level() { return `${NUM_ZH[scaleMax()]}點量表（會議決議等級）`; } };
 const FINW = { single: [900, 1100, 3500, 1300, 1500, 2166], double: [800, 1000, 2600, 2000, 1100, 1300, 1666] };
 const FINW_S = { single: [800, 1000, 3000, 450, 450, 450, 450, 450, 1300, 2116], double: [700, 900, 2300, 1800, 450, 450, 450, 450, 450, 1200, 1316] };
 function finalHTML(fd) {
@@ -4192,16 +4340,16 @@ function finalHTML(fd) {
   </div>`;
 }
 function finalHTMLScale(fd) {
-  const sd = fd.sd, dbl = sd.cat.layout === "double", W = FINW_S[dbl ? "double" : "single"], tot = W.reduce((a, b) => a + b, 0);
+  const sd = fd.sd, dbl = sd.cat.layout === "double", { W, n: nS } = finCols(dbl), tot = W.reduce((a, b) => a + b, 0);
   const sum = fd.awards.map(a => `${a.name} ${fd.list.filter(x => x.award === a.name).length}${a.quota ? `（名額 ${a.quota}）` : ""}`).join("、");
   return `<div class="sheet">
     <p class="s-h1">${esc(S.cfg?.title || DEFAULT_TITLE)}</p>
     <p class="s-title"><b>【${esc(sd.cat.name)}】評定結果</b></p>
-    <p>※ <b>5</b>分代表優良出眾；<b>4</b>分代表良好；<b>3</b>分代表符合標準；<b>2</b>分代表尚可；<b>1</b>分代表不符標準。</p>
+    <p>※ ${scaleNote(true)}</p>
     <table><colgroup>${W.map(w => `<col style="width:${(w / tot * 100).toFixed(2)}%">`).join("")}</colgroup>
-      <thead><tr><th rowspan="2">名次</th><th rowspan="2">編號</th><th rowspan="2">${esc(sd.cat.col1Label || (dbl ? "機關學校" : "學校"))}</th>${dbl ? `<th rowspan="2">${esc(sd.cat.col2Label || "團體名稱")}</th>` : ""}<th colspan="5">評分</th><th rowspan="2">等第</th><th rowspan="2">備註</th></tr>
-      <tr><th>5</th><th>4</th><th>3</th><th>2</th><th>1</th></tr></thead>
-      <tbody>${fd.list.map(r => `<tr><td>${r.pos || ""}</td><td>${esc(r.e.code)}</td><td>${esc(r.e.org)}</td>${dbl ? `<td>${esc(r.e.name || "")}</td>` : ""}${[5, 4, 3, 2, 1].map(v => `<td>${r.level === v ? "■" : ""}</td>`).join("")}<td><b>${esc(r.award)}</b></td><td class="op">${esc(r.note)}</td></tr>`).join("")}</tbody>
+      <thead><tr><th rowspan="2">名次</th><th rowspan="2">編號</th><th rowspan="2">${esc(sd.cat.col1Label || (dbl ? "機關學校" : "學校"))}</th>${dbl ? `<th rowspan="2">${esc(sd.cat.col2Label || "團體名稱")}</th>` : ""}<th colspan="${nS}">評分</th><th rowspan="2">等第</th><th rowspan="2">備註</th></tr>
+      <tr>${scaleList().map(v => `<th class="sc">${v}</th>`).join("")}</tr></thead>
+      <tbody>${fd.list.map(r => `<tr><td>${r.pos || ""}</td><td>${esc(r.e.code)}</td><td>${esc(r.e.org)}</td>${dbl ? `<td>${esc(r.e.name || "")}</td>` : ""}${scaleList().map(v => `<td class="sc">${r.level === v ? "■" : ""}</td>`).join("")}<td><b>${esc(r.award)}</b></td><td class="op">${esc(r.note)}</td></tr>`).join("")}</tbody>
     </table>
     ${sum ? `<p class="s-note">獎項統計：${esc(sum)}</p>` : ""}
     ${sd.cat.note ? `<p>備註：${esc(sd.cat.note)}</p>` : ""}
@@ -4222,7 +4370,7 @@ const consFileName = (fd, ext) => safeName(`${yearTag()}閱讀評選_${fd.sd.cat
 const finalFileName = (fd, ext) => safeName(`${yearTag()}閱讀評選_${fd.sd.cat.name}_評定結果`) + "." + ext;
 async function finalDocx(fd) {
   const k = docxKit(), { D, run, para, C, cell } = k, sd = fd.sd, dbl = sd.cat.layout === "double", scale = fd.display !== "avg";
-  const W = (scale ? FINW_S : FINW)[dbl ? "double" : "single"];
+  const fc = finCols(dbl), W = scale ? fc.W : FINW[dbl ? "double" : "single"], nS = fc.n, scO = { margins: { top: 50, bottom: 50, left: 20, right: 20 } }, scZ = nS > 7 ? { size: 20 } : {};
   const lead = ["名次", "編號", sd.cat.col1Label || (dbl ? "機關學校" : "學校"), ...(dbl ? [sd.cat.col2Label || "團體名稱"] : [])], nL = lead.length;
   let rows;
   if (!scale) {
@@ -4231,13 +4379,13 @@ async function finalDocx(fd) {
       ...fd.list.map(r => new D.TableRow({ cantSplit: true, children: [String(r.pos || ""), r.e.code, r.e.org, ...(dbl ? [r.e.name || ""] : []), fmtAvg(r.avg), r.award, r.note]
         .map((t, j) => cell([para(run(String(t || ""), j === heads.length - 2 ? { bold: true } : {}), j === heads.length - 1 ? {} : C)], W[j])) }))];
   } else {
-    rows = [new D.TableRow({ tableHeader: true, children: [...lead.map((t, i) => cell([para(run(t), C)], W[i], { rowSpan: 2 })), cell([para(run("評分"), C)], 2250, { columnSpan: 5 }),
-        cell([para(run("等第"), C)], W[nL + 5], { rowSpan: 2 }), cell([para(run("備註"), C)], W[nL + 6], { rowSpan: 2 })] }),
-      new D.TableRow({ tableHeader: true, children: [5, 4, 3, 2, 1].map(v => cell([para(run(String(v)), C)], 450)) }),
+    rows = [new D.TableRow({ tableHeader: true, children: [...lead.map((t, i) => cell([para(run(t), C)], W[i], { rowSpan: 2 })), cell([para(run("評分"), C)], fc.cw * nS, { columnSpan: nS }),
+        cell([para(run("等第"), C)], W[nL + nS], { rowSpan: 2 }), cell([para(run("備註"), C)], W[nL + nS + 1], { rowSpan: 2 })] }),
+      new D.TableRow({ tableHeader: true, children: scaleList().map(v => cell([para(run(String(v), scZ), C)], fc.cw, scO)) }),
       ...fd.list.map(r => new D.TableRow({ cantSplit: true, children: [
         ...[String(r.pos || ""), r.e.code, r.e.org, ...(dbl ? [r.e.name || ""] : [])].map((t, j) => cell([para(run(t), C)], W[j])),
-        ...[5, 4, 3, 2, 1].map(v => cell([para(run(r.level === v ? "■" : ""), C)], 450)),
-        cell([para(run(r.award || "", { bold: true }), C)], W[nL + 5]), cell([para(run(r.note || ""))], W[nL + 6])] }))];
+        ...scaleList().map(v => cell([para(run(r.level === v ? "■" : "", scZ), C)], fc.cw, scO)),
+        cell([para(run(r.award || "", { bold: true }), C)], W[nL + nS]), cell([para(run(r.note || ""))], W[nL + nS + 1])] }))];
   }
   const sum = fd.awards.map(a => `${a.name} ${fd.list.filter(x => x.award === a.name).length}${a.quota ? `（名額 ${a.quota}）` : ""}`).join("、");
   return new D.Document({
@@ -4246,7 +4394,7 @@ async function finalDocx(fd) {
     sections: [{ properties: { page: { size: { width: 11906, height: 16838 }, margin: { top: 720, right: 720, bottom: 720, left: 720 } } }, children: [
       para(run(S.cfg?.title || DEFAULT_TITLE, { size: 28, bold: true }), C),
       para(run(`【${sd.cat.name}】評定結果`, { bold: true }), C),
-      para(run(scale ? "※ 5分代表優良出眾；4分代表良好；3分代表符合標準；2分代表尚可；1分代表不符標準。" : `評分委員：${sd.sj.map(j => j.name).join("、") || "—"}　　製表時間：${fmtDT(Date.now())}`, { size: 22 })),
+      para(run(scale ? "※ " + scaleNote(false) : `評分委員：${sd.sj.map(j => j.name).join("、") || "—"}　　製表時間：${fmtDT(Date.now())}`, { size: 22 })),
       new D.Table({ rows, width: { size: W.reduce((a, b) => a + b, 0), type: D.WidthType.DXA }, columnWidths: W, layout: D.TableLayoutType.FIXED }),
       ...(sum ? [para(run(`獎項統計：${sum}`, { size: 22 }), { spacing: { before: 120 } })] : []),
       ...(sd.cat.note ? [para(run(`備註：${sd.cat.note}`, { size: 22 }))] : []),
@@ -4312,7 +4460,7 @@ async function parseRefSheet(file, defYear, defCat) {
 }
 function refsFromCurrent() {
   const y = curYear(), out = [];
-  S.comments.forEach(cm => { const en = S.entries.find(e => e.id === cm.entryId), cat = catOf(cm.catId); if (en && cat) out.push({ year: y, catName: cat.name, level: scoreOf(cm.entryId, cm.judgeUid) || 0, org: en.org, name: en.name || "", text: cm.text }); });
+  S.comments.forEach(cm => { const en = S.entries.find(e => e.id === cm.entryId), cat = catOf(cm.catId); if (en && cat) out.push({ year: y, catName: cat.name, level: sb(scoreOf(cm.entryId, cm.judgeUid)) || 0, org: en.org, name: en.name || "", text: cm.text }); });
   return out;
 }
 function refImportOps(list) {
@@ -4430,7 +4578,7 @@ function sheetGrid(host, { cols, newRow, onChange, emptyText = "" }) {
 /* ---------- 評語等級（對應評分 5～1；0＝通用） ---------- */
 const REF_LV_DEFAULT = [5, 4, 3];
 const refLevels = () => (Array.isArray(S.cfg?.refLevels) && S.cfg.refLevels.length ? S.cfg.refLevels : REF_LV_DEFAULT).map(Number).filter(v => v >= 1 && v <= 5).sort((a, b) => b - a);
-const lvName = v => +v ? `${v}・${scaleLabel(+v)}` : "通用";
+const lvName = v => +v ? `${v}・${bandLabel(+v)}` : "通用";
 function parseLevel(v) {
   const s = String(v ?? "").trim(); if (!s || /通用|不分|全部|未分/.test(s)) return 0;
   const n = s.match(/^[1-5]/); if (n) return +n[0];
@@ -4588,7 +4736,7 @@ AdminTabs.refs = pane => {
     await loadScript(LIB.xlsx); const X = window.XLSX, wb = X.utils.book_new();
     const l = sortRefs(filtered());
     const aoa = [["年度", "類別", "等級（5～1，空白＝通用）", "學校／機關學校（空白＝通用）", "團體名稱／姓名", "評語"],
-      ...(l.length ? l.map(r => [r.year, r.catName, +r.level ? `${r.level} ${scaleLabel(+r.level)}` : "", r.org, r.name, r.text])
+      ...(l.length ? l.map(r => [r.year, r.catName, +r.level ? `${r.level} ${bandLabel(+r.level)}` : "", r.org, r.name, r.text])
         : [[curYear() - 1, S.cats[0]?.name || "磐石學校：國小組", "5 優良出眾", "", "", "閱讀推動策略完整，成效具體且具特色。"], [curYear() - 1, S.cats[0]?.name || "磐石學校：國小組", "4 良好", "", "", "具閱讀推動理念與組織架構，惟成效佐證可再補充。"], [curYear() - 1, S.cats[0]?.name || "磐石學校：國小組", "3 符合標準", "", "", "閱讀推動內容符合基本要求，建議強化特色與成效評估。"]])];
     const ws = X.utils.aoa_to_sheet(aoa); ws["!cols"] = [{ wch: 6 }, { wch: 20 }, { wch: 16 }, { wch: 22 }, { wch: 16 }, { wch: 80 }];
     X.utils.book_append_sheet(wb, ws, "參考評語");
@@ -4643,7 +4791,7 @@ AdminTabs.refs = pane => {
     const on = !!S.cfg?.refEnabled;
     $("#rfOn", pane).checked = on; $("#rfOnL", pane).textContent = on ? "委員評分頁會顯示「參考評語」" : "目前關閉，委員看不到參考評語";
     const lv = refLevels();
-    setHTML($("#rfLvs", pane), [5, 4, 3, 2, 1].map(v => `<label class="lv-tog"><input type="checkbox" value="${v}" ${lv.includes(v) ? "checked" : ""}><span class="lv-chip l${v}">${v}</span>${scaleLabel(v)}</label>`).join(""));
+    setHTML($("#rfLvs", pane), [5, 4, 3, 2, 1].map(v => `<label class="lv-tog"><input type="checkbox" value="${v}" ${lv.includes(v) ? "checked" : ""}><span class="lv-chip l${v}">${v}</span>${bandLabel(v)}</label>`).join(""));
     const all = S.refs || [], ys = [...new Set(all.map(r => String(r.year)))].sort().reverse(), cs = [...new Set([...S.cats.map(c => c.name), ...all.map(r => r.catName).filter(Boolean)])];
     setHTML($("#rfY", pane), `<option value="">全部年度</option>${ys.map(y => `<option ${y === f.y ? "selected" : ""}>${y}</option>`).join("")}`);
     setHTML($("#rfC", pane), `<option value="">全部類別</option>${cs.map(c => `<option ${c === f.cat ? "selected" : ""}>${esc(c)}</option>`).join("")}`);
@@ -4859,7 +5007,7 @@ AdminTabs.records = pane => {
       <div class="tbl-wrap scroll"><table class="tbl dense pvtbl"><thead><tr><th class="num">名次</th><th>編號</th><th>${esc(a.col1Label || "學校")}</th>${dbl ? `<th>${esc(a.col2Label || "名稱")}</th>` : ""}${sj.map(j => `<th class="num">${esc(j.name)}</th>`).join("")}<th class="num">平均</th><th class="num">等第</th><th>備註</th><th class="num">審查意見</th></tr></thead><tbody>
         ${(a.rows || []).map((r, i) => { const nc = (r.cm || []).reduce((x, c) => x + c.list.length, 0), op = arcOpen.has(i) && nc;
           return `<tr data-ai="${i}" ${nc ? 'data-nc="1"' : ""} class="${op ? "pv-open" : ""}"><td class="num">${r.pos || '<span class="muted">—</span>'}</td><td class="nowrap"><b>${esc(r.code)}</b></td><td>${esc(r.org)}</td>${dbl ? `<td>${esc(r.name)}</td>` : ""}
-            ${(r.sc || []).map(x => `<td class="num">${x ? `<span class="pill s s${x}">${x}</span>` : '<span class="muted">—</span>'}</td>`).join("")}
+            ${(r.sc || []).map(x => `<td class="num">${x ? `<span class="pill s s${sb(x, a.scaleMax || 5)}">${x}</span>` : '<span class="muted">—</span>'}</td>`).join("")}
             <td class="num"><b>${r.avg != null ? fmtAvg(r.avg) : "—"}</b></td><td class="num">${r.award ? `<span class="awd a${Math.min((parseAwards(a.awards).findIndex(x => x.name === r.award) + 1) || 4, 4)}">${esc(r.award)}</span>` : "—"}</td><td class="small">${esc(r.note || "")}</td>
             <td class="num">${nc ? `<button class="btn ghost sm pv-tg" aria-expanded="${!!op}">${nc} 則${I(op ? "up" : "down", "sm")}</button>` : '<span class="muted">—</span>'}</td></tr>
             ${op ? `<tr class="pv-cm"><td colspan="${ncol}"><div class="pv-cmgrid">${r.cm.map(c => `<div class="pv-cmj"><b>${esc(c.j)}</b><ol>${c.list.map(t => `<li>${esc(t)}</li>`).join("")}</ol></div>`).join("")}</div></td></tr>` : ""}`; }).join("") || `<tr><td colspan="${ncol}" class="empty">此類別沒有資料</td></tr>`}</tbody></table></div>`}`;
@@ -4969,7 +5117,7 @@ function archiveOps(year) {
   const now = Date.now();
   return allCats().map((c, ci) => {
     const fd = finalData(c.id), sd = fd.sd;
-    const d = { year, title: S.cfg?.title || "", catId: c.id, catName: c.name || "", catOrder: ci, layout: c.layout || "single", col1Label: c.col1Label || "", col2Label: c.col2Label || "", awards: c.awards || "",
+    const d = { year, title: S.cfg?.title || "", catId: c.id, catName: c.name || "", catOrder: ci, layout: c.layout || "single", col1Label: c.col1Label || "", col2Label: c.col2Label || "", awards: c.awards || "", scaleMax: scaleMax(),
       locked: !!fd.res?.locked, judges: sd.js.map(j => ({ name: j.name || "", scorer: sd.sj.includes(j) })),
       rows: fd.list.map(r => ({ code: r.e.code || "", org: r.e.org || "", name: r.e.name || "", pos: r.pos || 0, avg: r.avg ?? null, award: r.award || "", note: r.note || "", sc: r.sc.map(x => x || 0), cm: r.cm.map(x => ({ j: x.name || "", list: x.list })) })),
       archivedAt: now, archivedBy: S.me?.name || "" };
